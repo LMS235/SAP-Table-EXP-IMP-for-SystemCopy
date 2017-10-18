@@ -1,0 +1,6 @@
+delete from /SAPSLL/TCOGVA 
+select * from /SAPSLL/TCOGVA 
+delete from /SAPSLL/TCOGVS
+select * from /SAPSLL/TCOGVS
+delete from /SAPSLL/TCOGVST
+select * from /SAPSLL/TCOGVST

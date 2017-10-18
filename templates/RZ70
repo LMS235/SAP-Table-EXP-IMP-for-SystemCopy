@@ -1,0 +1,4 @@
+delete from LCRT_INDX
+select * from LCRT_INDX
+delete from SLDAGADM
+select * from SLDAGADM

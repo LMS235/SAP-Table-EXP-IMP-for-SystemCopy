@@ -1,0 +1,122 @@
+delete from ALMBCDATA
+select * from ALMBCDATA
+delete from DLV_SYSTC
+select * from DLV_SYSTC
+delete from E070L
+select * from E070L
+delete from E070USE
+select * from E070USE
+delete from TCECLILY
+select * from TCECLILY
+delete from TCECPSTAT
+select * from TCECPSTAT
+delete from TCEDELI
+select * from TCEDELI
+delete from TCERELE
+select * from TCERELE
+delete from TCESYST
+select * from TCESYST
+delete from TCESYSTT
+select * from TCESYSTT
+delete from TCETARG
+select * from TCETARG
+delete from TCETARGHDR
+select * from TCETARGHDR
+delete from TCETARGT
+select * from TCETARGT
+delete from TCETRAL
+select * from TCETRAL
+delete from TCETRALT
+select * from TCETRALT
+delete from TCEVERS
+select * from TCEVERS
+delete from TCEVERST
+select * from TCEVERST
+delete from TMSACTDAT
+select * from TMSACTDAT
+delete from TMSALOG
+select * from TMSALOG
+delete from TMSALOGAR
+select * from TMSALOGAR
+delete from TMSALRTSYS
+select * from TMSALRTSYS
+delete from TMSBCIBOX
+select * from TMSBCIBOX
+delete from TMSBCIIBOX
+select * from TMSBCIIBOX
+delete from TMSBCIJOY
+select * from TMSBCIJOY
+delete from TMSBCINEX
+select * from TMSBCINEX
+delete from TMSBCINTAB
+select * from TMSBCINTAB
+delete from TMSBCIOBJ
+select * from TMSBCIOBJ
+delete from TMSBCIXBOX
+select * from TMSBCIXBOX
+delete from TMSBUFCNT
+select * from TMSBUFCNT
+delete from TMSBUFPRO
+select * from TMSBUFPRO
+delete from TMSBUFREQ
+select * from TMSBUFREQ
+delete from TMSBUFTXT
+select * from TMSBUFTXT
+delete from TMSCDES
+select * from TMSCDES
+delete from TMSCDOM
+select * from TMSCDOM
+delete from TMSCDOMT
+select * from TMSCDOMT
+delete from TMSCNFS
+select * from TMSCNFS
+delete from TMSCNFST
+select * from TMSCNFST
+delete from TMSCROUTE
+select * from TMSCROUTE
+delete from TMSCSYS
+select * from TMSCSYS
+delete from TMSCSYST
+select * from TMSCSYST
+delete from TMSCTOK
+select * from TMSCTOK
+delete from TMSFSYSH
+select * from TMSFSYSH
+delete from TMSFSYSL
+select * from TMSFSYSL
+delete from TMSMCONF
+select * from TMSMCONF
+delete from TMSPCONF
+select * from TMSPCONF
+delete from TMSPVERS
+select * from TMSPVERS
+delete from TMSQASTEPS
+select * from TMSQASTEPS
+delete from TMSQASTEPT
+select * from TMSQASTEPT
+delete from TMSQASTEPZ
+select * from TMSQASTEPZ
+delete from TMSQCONFRM
+select * from TMSQCONFRM
+delete from TMSSRV
+select * from TMSSRV
+delete from TMSSRVT
+select * from TMSSRVT
+delete from TMSTLOCKNP
+select * from TMSTLOCKNP
+delete from TMSTLOCKNR
+select * from TMSTLOCKNR
+delete from TMSTLOCKP
+select * from TMSTLOCKP
+delete from TMSTLOCKR
+select * from TMSTLOCKR
+delete from TRBAT
+select * from TRBAT
+delete from TRJOB
+select * from TRJOB
+delete from TRNSPACE
+select * from TRNSPACE
+delete from TRNSPACEL
+select * from TRNSPACEL
+delete from TRNSPACETT
+select * from TRNSPACETT

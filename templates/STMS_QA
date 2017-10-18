@@ -1,0 +1,16 @@
+delete from TMSQNOTES
+select * from TMSQNOTES
+delete from TMSQNOTESH
+select * from TMSQNOTESH
+delete from TMSQWLF
+select * from TMSQWLF
+delete from TMSQWLFH
+select * from TMSQWLFH
+delete from TMSQWLH
+select * from TMSQWLH
+delete from TMSQWLN
+select * from TMSQWLN
+delete from TMSQWL
+select * from TMSQWL
+delete from TMSQLASTWL
+select * from TMSQLASTWL

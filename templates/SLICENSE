@@ -1,0 +1,2 @@
+delete from SAPLIKEY
+select * from SAPLIKEY

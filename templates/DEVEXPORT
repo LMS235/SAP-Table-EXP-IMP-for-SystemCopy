@@ -1,0 +1,26 @@
+delete from ADIRACCESS
+select * from ADIRACCESS
+delete from DEVACCESS
+select * from DEVACCESS
+delete from ENHCONTRACTCONT
+select * from ENHCONTRACTCONT
+delete from ENHLOG
+select * from ENHLOG
+delete from ENHOBJCONTRACT
+select * from ENHOBJCONTRACT
+delete from RSEUMOD
+select * from RSEUMOD
+delete from VRSD
+select * from VRSD
+delete from VRSMODISRC
+select * from VRSMODISRC
+delete from VRSX
+select * from VRSX
+delete from VRSX2
+select * from VRSX2
+delete from VRSX3
+select * from VRSX3
+delete from VRSX4
+select * from VRSX4
+delete from VRSX5
+select * from VRSX5

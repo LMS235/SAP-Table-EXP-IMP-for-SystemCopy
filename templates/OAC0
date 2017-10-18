@@ -1,0 +1,2 @@
+delete from TOAAR
+select * from TOAAR

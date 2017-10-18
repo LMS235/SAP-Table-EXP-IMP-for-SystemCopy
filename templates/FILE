@@ -1,0 +1,26 @@
+delete from FILENAME
+select * from FILENAME
+delete from FILENAMECI
+select * from FILENAMECI
+delete from FILEPATH
+select * from FILEPATH
+delete from FILESYS
+select * from FILESYS
+delete from FILETEXT
+select * from FILETEXT
+delete from FILETEXTCI
+select * from FILETEXTCI
+delete from FSYSTXT
+select * from FSYSTXT
+delete from OPSYSTEM
+select * from OPSYSTEM
+delete from OPTEXT
+select * from OPTEXT
+delete from PARAMVALUE
+select * from PARAMVALUE
+delete from PATH
+select * from PATH
+delete from PATHTEXT
+select * from PATHTEXT
+delete from USER_DIR
+select * from USER_DIR

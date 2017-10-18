@@ -1,0 +1,2 @@
+delete from USER_DIR
+select * from USER_DIR

@@ -1,0 +1,48 @@
+delete from RFC_TT_ACL
+select * from RFC_TT_ACL
+delete from RFC_TT_ACL_HIST
+select * from RFC_TT_ACL_HIST
+delete from RFC_TT_SAMEU
+select * from RFC_TT_SAMEU
+delete from RFCADPTATTR
+select * from RFCADPTATTR
+delete from RFCATTRIB
+select * from RFCATTRIB
+delete from RFCCAT
+select * from RFCCAT
+delete from RFCCHECK
+select * from RFCCHECK
+delete from RFCCMC
+select * from RFCCMC
+delete from RFCDES
+select * from RFCDES
+delete from RFCDESSECU
+select * from RFCDESSECU
+delete from RFCDOC
+select * from RFCDOC
+delete from RFCGO
+select * from RFCGO
+delete from RFC2SOAPS
+select * from RFC2SOAPS
+delete from RFCSOAPS
+select * from RFCSOAPS
+delete from RFCSYSACL
+select * from RFCSYSACL
+delete from RFCSYSACL_CLNT
+select * from RFCSYSACL_CLNT
+delete from RFCTRUST
+select * from RFCTRUST
+delete from RFCTXTAB
+select * from RFCTXTAB
+delete from RFCTXTAB
+select * from RFCTXTAB
+delete from RFCTYPE
+select * from RFCTYPE
+delete from RSECACHK
+select * from RSECACHK
+delete from RSECACTB
+select * from RSECACTB
+delete from RSECTAB
+select * from RSECTAB
+delete from SNCSYSACL
+select * from SNCSYSACL

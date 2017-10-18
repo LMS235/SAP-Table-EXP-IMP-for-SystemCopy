@@ -1,0 +1,4 @@
+delete from TBDLS
+select * from TBDLS
+delete from TBDLST
+select * from TBDLST

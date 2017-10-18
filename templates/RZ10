@@ -1,0 +1,4 @@
+delete from TPFET
+select * from TPFET
+delete from TPFHT
+select * from TPFHT

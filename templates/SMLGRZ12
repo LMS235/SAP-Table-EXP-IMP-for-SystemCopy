@@ -1,0 +1,4 @@
+delete from RZLLICLASS
+select * from RZLLICLASS
+delete from RZLLITAB
+select * from RZLLITAB

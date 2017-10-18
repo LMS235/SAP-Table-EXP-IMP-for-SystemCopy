@@ -1,0 +1,10 @@
+delete from SNCSYSACL
+select * from SNCSYSACL
+delete from TSP0U
+select * from TSP0U
+delete from TXCOMSECU
+select * from TXCOMSECU
+delete from USRACL
+select * from USRACL
+delete from USRACLEXT
+select * from USRACLEXT

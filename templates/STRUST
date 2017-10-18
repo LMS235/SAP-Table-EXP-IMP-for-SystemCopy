@@ -1,0 +1,54 @@
+delete from SMIME_CAPA_CRYPT
+select * from SMIME_CAPA_CRYPT
+delete from SMIME_CAPA_SIGN
+select * from SMIME_CAPA_SIGN
+delete from SMIME_CAPABILITY
+select * from SMIME_CAPABILITY
+delete from SSF_PSE_D
+select * from SSF_PSE_D
+delete from SSF_PSE_H
+select * from SSF_PSE_H
+delete from SSF_PSE_HIST
+select * from SSF_PSE_HIST
+delete from SSF_PSE_L
+select * from SSF_PSE_L
+delete from SSF_PSE_T
+select * from SSF_PSE_T
+delete from SSFAPPLIC
+select * from SSFAPPLIC
+delete from SSFAPPLICT
+select * from SSFAPPLICT
+delete from SSFARGS
+select * from SSFARGS
+delete from SSFVARGS
+select * from SSFVARGS
+delete from SSFVARGST
+select * from SSFVARGST
+delete from SSFVKEYDEF
+select * from SSFVKEYDEF
+delete from STRUSTCAB
+select * from STRUSTCAB
+delete from STRUSTCERT
+select * from STRUSTCERT
+delete from STRUSTCRL
+select * from STRUSTCRL
+delete from STRUSTCRP
+select * from STRUSTCRP
+delete from STRUSTCRPT
+select * from STRUSTCRPT
+delete from STRUSTCRR
+select * from STRUSTCRR
+delete from STRUSTCRRT
+select * from STRUSTCRRT
+delete from STRUSTCRS
+select * from STRUSTCRS
+delete from STRUSTCRT
+select * from STRUSTCRT
+delete from TWPSSO2ACL
+select * from TWPSSO2ACL
+delete from USERINFO_STORAGE
+select * from USERINFO_STORAGE
+delete from USRCERTMAP
+select * from USRCERTMAP
+delete from USRCERTRULE
+select * from USRCERTRULE

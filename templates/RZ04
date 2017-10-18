@@ -1,0 +1,6 @@
+delete from BTCOMSET
+select * from BTCOMSET
+delete from TPFBA
+select * from TPFBA
+delete from TPFID
+select * from TPFID

@@ -1,0 +1,52 @@
+delete from BCSD_BLMODULE
+select * from BCSD_BLMODULE
+delete from BCSD_BREAKLOOP
+select * from BCSD_BREAKLOOP
+delete from BCSD_RQST
+select * from BCSD_RQST
+delete from BCSD_STML
+select * from BCSD_STML
+delete from SXADMINTAB
+select * from SXADMINTAB
+delete from SXCONVERT
+select * from SXCONVERT
+delete from SXCONVERT2
+select * from SXCONVERT2
+delete from SXCOS
+select * from SXCOS
+delete from SXCOS_T
+select * from SXCOS_T
+delete from SXCPDEF
+select * from SXCPDEF
+delete from SXCPRECV
+select * from SXCPRECV
+delete from SXCPSEND
+select * from SXCPSEND
+delete from SXDEVTYPE
+select * from SXDEVTYPE
+delete from SXDEVTYPL
+select * from SXDEVTYPL
+delete from SXDOMAINS
+select * from SXDOMAINS
+delete from SXJOBS
+select * from SXJOBS
+delete from SXNODES
+select * from SXNODES
+delete from SXPARAMS
+select * from SXPARAMS
+delete from SXRETRY
+select * from SXRETRY
+delete from SXROUTE
+select * from SXROUTE
+delete from SXSERV
+select * from SXSERV
+delete from SXTELMOIN
+select * from SXTELMOIN
+delete from SXTELMOOUT
+select * from SXTELMOOUT
+delete from T005J
+select * from T005J
+delete from T005K
+select * from T005K
+delete from TSAPD
+select * from TSAPD
