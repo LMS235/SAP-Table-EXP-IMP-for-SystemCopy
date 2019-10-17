@@ -1,7 +1,8 @@
 #!/bin/bash
-# SAP Table EXP/IMP for SystemCopy (c) Florian Lamml 2015
+# SAP Table EXP/IMP for SystemCopy (c) Florian Lamml 2019
 # www.florian-lamml.de
 # Version 1.0 - Initial Release
+# Version 1.1 - Client Config
 
 # set config file and delete old one
 export exportedtables=$EXPIMPLOC/exported_tables.conf
