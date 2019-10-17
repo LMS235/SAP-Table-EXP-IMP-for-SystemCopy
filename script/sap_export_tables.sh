@@ -97,6 +97,7 @@ dialog --title "$global_title" --backtitle "$global_backtitle" --progressbox "Ex
 while read SELTABLES
 do
  echo "export" >> $EXPIMPLOC/$SELTABLES.tpl
+ echo "client = '"$EXPCLIENT"'" >> $EXPIMPLOC/$SELTABLES.tpl
  echo "file = '"$EXPIMPLOC"/"$SELTABLES".dat'" >> $EXPIMPLOC/$SELTABLES.tpl
  cat $global_pwd/templates/$SELTABLES >> $EXPIMPLOC/$SELTABLES.tpl
  echo "=== Export START" $SELTABLES "==="
