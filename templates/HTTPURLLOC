@@ -1,0 +1,8 @@
+delete from HTTPURLLOC
+select * HTTPURLLOC
+delete from IACORDES
+select * IACORDES
+delete from IACORDEST
+select * IACORDEST
+delete from IACORSITE
+select * IACORSITE

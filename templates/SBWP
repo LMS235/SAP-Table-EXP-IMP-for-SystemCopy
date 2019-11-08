@@ -1,0 +1,16 @@
+delete from SODM
+select * from SODM
+delete from SOFD
+select * from SOFD
+delete from SOFM
+select * from SOFM
+delete from SOID
+select * from SOID
+delete from SOOD
+select * from SOOD
+delete from SOUB
+select * from SOUB
+delete from SOUC
+select * from SOUC
+delete from SOUD
+select * from SOUD

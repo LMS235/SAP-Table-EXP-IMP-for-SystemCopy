@@ -1,48 +1,56 @@
+delete from APC_CROSS_ORIGIN
+select * APC_CROSS_ORIGIN
 delete from RFC_TT_ACL
-select * from RFC_TT_ACL
+select * RFC_TT_ACL
 delete from RFC_TT_ACL_HIST
-select * from RFC_TT_ACL_HIST
+select * RFC_TT_ACL_HIST
 delete from RFC_TT_SAMEU
-select * from RFC_TT_SAMEU
-delete from RFCADPTATTR
-select * from RFCADPTATTR
-delete from RFCATTRIB
-select * from RFCATTRIB
-delete from RFCCAT
-select * from RFCCAT
-delete from RFCCHECK
-select * from RFCCHECK
-delete from RFCCMC
-select * from RFCCMC
-delete from RFCDES
-select * from RFCDES
-delete from RFCDESSECU
-select * from RFCDESSECU
-delete from RFCDOC
-select * from RFCDOC
-delete from RFCGO
-select * from RFCGO
+select * RFC_TT_SAMEU
 delete from RFC2SOAPS
-select * from RFC2SOAPS
+select * RFC2SOAPS
+delete from RFCADPTATTR
+select * RFCADPTATTR
+delete from RFCATTRIB
+select * RFCATTRIB
+delete from RFCCAT
+select * RFCCAT
+delete from RFCCBWHITELIST
+select * RFCCBWHITELIST
+delete from RFCCBWHITELIST_A
+select * RFCCBWHITELIST_A
+delete from RFCCHECK
+select * RFCCHECK
+delete from RFCCMC
+select * RFCCMC
+delete from RFCDES
+select * RFCDES
+delete from RFCDESSECU
+select * RFCDESSECU
+delete from RFCDOC
+select * RFCDOC
+delete from RFCGO
+select * RFCGO
 delete from RFCSOAPS
-select * from RFCSOAPS
+select * RFCSOAPS
+delete from RFCSTXTAB
+select * RFCSTXTAB
 delete from RFCSYSACL
-select * from RFCSYSACL
+select * RFCSYSACL
 delete from RFCSYSACL_CLNT
-select * from RFCSYSACL_CLNT
+select * RFCSYSACL_CLNT
 delete from RFCTRUST
-select * from RFCTRUST
+select * RFCTRUST
 delete from RFCTXTAB
-select * from RFCTXTAB
-delete from RFCTXTAB
-select * from RFCTXTAB
+select * RFCTXTAB
 delete from RFCTYPE
-select * from RFCTYPE
+select * RFCTYPE
 delete from RSECACHK
-select * from RSECACHK
+select * RSECACHK
 delete from RSECACTB
-select * from RSECACTB
+select * RSECACTB
+delete from RSECKEYMETA
+select * RSECKEYMETA
 delete from RSECTAB
-select * from RSECTAB
+select * RSECTAB
 delete from SNCSYSACL
-select * from SNCSYSACL
+select * SNCSYSACL

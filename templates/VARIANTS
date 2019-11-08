@@ -1,0 +1,14 @@
+delete from TVARVC
+select * TVARVC
+delete from VARI
+select * VARI
+delete from VARID
+select * VARID
+delete from VARIDESC
+select * VARIDESC
+delete from VARINUM
+select * VARINUM
+delete from VARIS
+select * VARIS
+delete from VARIT
+select * VARIT

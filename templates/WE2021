@@ -1,0 +1,30 @@
+delete from EDIPO
+select * from EDIPO
+delete from EDIPO2
+select * from EDIPO2
+delete from EDIPOA
+select * from EDIPOA
+delete from EDIPOACODPAG
+select * from EDIPOACODPAG
+delete from EDIPOD
+select * from EDIPOD
+delete from EDIPOF
+select * from EDIPOF
+delete from EDIPOI
+select * from EDIPOI
+delete from EDIPORT
+select * from EDIPORT
+delete from EDIPOX
+select * from EDIPOX
+delete from EDIPOXH
+select * from EDIPOXH
+delete from EDIPOXU
+select * from EDIPOXU
+delete from EDP12
+select * from EDP12
+delete from EDP13
+select * from EDP13
+delete from EDP21
+select * from EDP21
+delete from EDPP1
+select * from EDPP1

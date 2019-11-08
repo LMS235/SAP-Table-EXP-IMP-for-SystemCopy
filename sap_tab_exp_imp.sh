@@ -3,6 +3,7 @@
 # www.florian-lamml.de
 # Version 1.0 - Initial Release
 # Version 1.1 - Client Config
+# Version 1.2 - New Tables
 
 ##### CONFIG EXPORT / IMPORT LOCATION #####
 export EXPIMPLOC=

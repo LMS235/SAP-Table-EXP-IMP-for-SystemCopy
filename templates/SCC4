@@ -1,0 +1,4 @@
+delete from CLMS_TENANT
+select * from CLMS_TENANT
+delete from T000
+select * from T000

@@ -1,0 +1,14 @@
+delete from RSAU_BUF_DATA
+select * RSAU_BUF_DATA
+delete from RSAU_TEMP_CDATA
+select * RSAU_TEMP_CDATA
+delete from RSAU_TEMP_DATA
+select * RSAU_TEMP_DATA
+delete from RSAUFILES
+select * RSAUFILES
+delete from RSAUFILES_STAT
+select * RSAUFILES_STAT
+delete from RSAUPROF
+select * RSAUPROF
+delete from RSAUPROFEX
+select * RSAUPROFEX

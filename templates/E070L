@@ -1,0 +1,2 @@
+delete from E070L
+select * from E070L

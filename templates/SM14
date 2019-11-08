@@ -1,0 +1,4 @@
+delete from APSRV
+select * APSRV
+delete from ASGRP
+select * ASGRP

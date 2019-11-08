@@ -1,20 +1,24 @@
 delete from ICF_SESSION_CNTL
-select * from ICF_SESSION_CNTL
+select * ICF_SESSION_CNTL
+delete from ICFALIAS
+select * ICFALIAS
+delete from ICFAPPLCUST
+select * ICFAPPLCUST
 delete from ICFAPPLICATION
-select * from ICFAPPLICATION
+select * ICFAPPLICATION
 delete from ICFDOCU
-select * from ICFDOCU
+select * ICFDOCU
 delete from ICFHANDLER
-select * from ICFHANDLER
+select * ICFHANDLER
 delete from ICFINSTACT
-select * from ICFINSTACT
+select * ICFINSTACT
 delete from ICFSECPASSWD
-select * from ICFSECPASSWD
+select * ICFSECPASSWD
 delete from ICFSERVICE
-select * from ICFSERVICE
+select * ICFSERVICE
 delete from ICFSERVLOC
-select * from ICFSERVLOC
+select * ICFSERVLOC
 delete from ICFVIRHOST
-select * from ICFVIRHOST
+select * ICFVIRHOST
 delete from TWPURLSVR
 select * TWPURLSVR

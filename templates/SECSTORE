@@ -1,0 +1,6 @@
+delete from RSECACTB
+select * RSECACTB
+delete from RSECTAB
+select * RSECTAB
+delete from RSECKEYMETA
+select * RSECKEYMETA

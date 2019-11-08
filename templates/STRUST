@@ -1,54 +1,72 @@
 delete from SMIME_CAPA_CRYPT
-select * from SMIME_CAPA_CRYPT
+select * SMIME_CAPA_CRYPT
 delete from SMIME_CAPA_SIGN
-select * from SMIME_CAPA_SIGN
+select * SMIME_CAPA_SIGN
 delete from SMIME_CAPABILITY
-select * from SMIME_CAPABILITY
+select * SMIME_CAPABILITY
 delete from SSF_PSE_D
-select * from SSF_PSE_D
+select * SSF_PSE_D
 delete from SSF_PSE_H
-select * from SSF_PSE_H
+select * SSF_PSE_H
 delete from SSF_PSE_HIST
-select * from SSF_PSE_HIST
+select * SSF_PSE_HIST
 delete from SSF_PSE_L
-select * from SSF_PSE_L
+select * SSF_PSE_L
 delete from SSF_PSE_T
-select * from SSF_PSE_T
+select * SSF_PSE_T
 delete from SSFAPPLIC
-select * from SSFAPPLIC
+select * SSFAPPLIC
 delete from SSFAPPLICT
-select * from SSFAPPLICT
+select * SSFAPPLICT
 delete from SSFARGS
-select * from SSFARGS
+select * SSFARGS
 delete from SSFVARGS
-select * from SSFVARGS
+select * SSFVARGS
 delete from SSFVARGST
-select * from SSFVARGST
+select * SSFVARGST
 delete from SSFVKEYDEF
-select * from SSFVKEYDEF
+select * SSFVKEYDEF
 delete from STRUSTCAB
-select * from STRUSTCAB
+select * STRUSTCAB
+delete from STRUSTCABEMAIL
+select * STRUSTCABEMAIL
 delete from STRUSTCERT
-select * from STRUSTCERT
+select * STRUSTCERT
 delete from STRUSTCRL
-select * from STRUSTCRL
+select * STRUSTCRL
 delete from STRUSTCRP
-select * from STRUSTCRP
+select * STRUSTCRP
 delete from STRUSTCRPT
-select * from STRUSTCRPT
+select * STRUSTCRPT
 delete from STRUSTCRR
-select * from STRUSTCRR
+select * STRUSTCRR
 delete from STRUSTCRRT
-select * from STRUSTCRRT
+select * STRUSTCRRT
 delete from STRUSTCRS
-select * from STRUSTCRS
+select * STRUSTCRS
 delete from STRUSTCRT
-select * from STRUSTCRT
+select * STRUSTCRT
+delete from STRUSTSMIM
+select * STRUSTSMIM
+delete from STRUSTSMIMT
+select * STRUSTSMIMT
+delete from STRUSTSSL
+select * STRUSTSSL
+delete from STRUSTSSLS
+select * STRUSTSSLS
+delete from STRUSTSSLST
+select * STRUSTSSLST
+delete from STRUSTSSLT
+select * STRUSTSSLT
+delete from STRUSTWSSE
+select * STRUSTWSSE
+delete from STRUSTWSSET
+select * STRUSTWSSET
 delete from TWPSSO2ACL
-select * from TWPSSO2ACL
+select * TWPSSO2ACL
 delete from USERINFO_STORAGE
-select * from USERINFO_STORAGE
+select * USERINFO_STORAGE
 delete from USRCERTMAP
-select * from USRCERTMAP
+select * USRCERTMAP
 delete from USRCERTRULE
-select * from USRCERTRULE
+select * USRCERTRULE

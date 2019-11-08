@@ -1,0 +1,4 @@
+delete from TSRVGRP
+select * from TSRVGRP
+delete from TSRVLST
+select * from TSRVLST

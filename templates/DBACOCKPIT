@@ -1,0 +1,18 @@
+delete from DB6NAVSYST
+select * from DB6NAVSYST
+delete from DB6PMPROT
+select * from DB6PMPROT
+delete from DBA_CONFIG
+select * from DBA_CONFIG
+delete from DBCON
+select * from DBCON
+delete from DBCONUSR
+select * from DBCONUSR
+delete from SDBAD
+select * from SDBAD
+delete from SDBAH
+select * from SDBAH
+delete from SDBAP
+select * from SDBAP
+delete from SDBAR
+select * from SDBAR

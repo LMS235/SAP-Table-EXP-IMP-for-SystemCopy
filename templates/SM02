@@ -1,0 +1,6 @@
+delete from TEMSG
+select * from TEMSG
+delete from TEMSGU
+select * from TEMSGU
+delete from TEMSI
+select * from TEMSI
