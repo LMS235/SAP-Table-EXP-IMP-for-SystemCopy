@@ -1,14 +1,14 @@
 delete from RSAU_BUF_DATA
-select * RSAU_BUF_DATA
+select * from RSAU_BUF_DATA
 delete from RSAU_TEMP_CDATA
-select * RSAU_TEMP_CDATA
+select * from RSAU_TEMP_CDATA
 delete from RSAU_TEMP_DATA
-select * RSAU_TEMP_DATA
+select * from RSAU_TEMP_DATA
 delete from RSAUFILES
-select * RSAUFILES
+select * from RSAUFILES
 delete from RSAUFILES_STAT
-select * RSAUFILES_STAT
+select * from RSAUFILES_STAT
 delete from RSAUPROF
-select * RSAUPROF
+select * from RSAUPROF
 delete from RSAUPROFEX
-select * RSAUPROFEX
+select * from RSAUPROFEX

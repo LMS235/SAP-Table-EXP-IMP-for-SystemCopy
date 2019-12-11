@@ -1,70 +1,70 @@
 delete from BTC_CRITERIA
-select * BTC_CRITERIA
+select * from BTC_CRITERIA
 delete from BTC_CRITNODES
-select * BTC_CRITNODES
+select * from BTC_CRITNODES
 delete from BTC_CRITPROFILES
-select * BTC_CRITPROFILES
+select * from BTC_CRITPROFILES
 delete from BTC_CRITTYPES
-select * BTC_CRITTYPES
+select * from BTC_CRITTYPES
 delete from BTC_TYPEFIELDS
-select * BTC_TYPEFIELDS
+select * from BTC_TYPEFIELDS
 delete from BTCEVTJOB
-select * BTCEVTJOB
+select * from BTCEVTJOB
 delete from BTCOPTIONS
-select * BTCOPTIONS
+select * from BTCOPTIONS
 delete from BTCUEV
-select * BTCUEV
+select * from BTCUEV
 delete from STJR_JOBD_CUST
-select * STJR_JOBD_CUST
+select * from STJR_JOBD_CUST
 delete from STJR_JOBD_ROOT
-select * STJR_JOBD_ROOT
+select * from STJR_JOBD_ROOT
 delete from STJR_JOBD_SCOPE
-select * STJR_JOBD_SCOPE
+select * from STJR_JOBD_SCOPE
 delete from STJR_JOBD_STATUS
-select * STJR_JOBD_STATUS
+select * from STJR_JOBD_STATUS
 delete from STJR_JOBD_TREP
-select * STJR_JOBD_TREP
+select * from STJR_JOBD_TREP
 delete from STJR_JOBD_VARIS
-select * STJR_JOBD_VARIS
+select * from STJR_JOBD_VARIS
 delete from TBTC_CHAIN
-select * TBTC_CHAIN
+select * from TBTC_CHAIN
 delete from TBTC_RUN_STAT
-select * TBTC_RUN_STAT
+select * from TBTC_RUN_STAT
 delete from TBTC_RUN_WHITE
-select * TBTC_RUN_WHITE
+select * from TBTC_RUN_WHITE
 delete from TBTC_TASK
-select * TBTC_TASK
+select * from TBTC_TASK
 delete from TBTC_TASK_DET
-select * TBTC_TASK_DET
+select * from TBTC_TASK_DET
 delete from TBTCCNTXT
-select * TBTCCNTXT
+select * from TBTCCNTXT
 delete from TBTCJOBLOG
-select * TBTCJOBLOG
+select * from TBTCJOBLOG
 delete from TBTCJOBLOG0
-select * TBTCJOBLOG0
+select * from TBTCJOBLOG0
 delete from TBTCJOBLOG1
-select * TBTCJOBLOG1
+select * from TBTCJOBLOG1
 delete from TBTCJOBLOG2
-select * TBTCJOBLOG2
+select * from TBTCJOBLOG2
 delete from TBTCJOBLOG3
-select * TBTCJOBLOG3
+select * from TBTCJOBLOG3
 delete from TBTCJOBLOG4
-select * TBTCJOBLOG4
+select * from TBTCJOBLOG4
 delete from TBTCJOBLOG5
-select * TBTCJOBLOG5
+select * from TBTCJOBLOG5
 delete from TBTCJOBLOG6
-select * TBTCJOBLOG6
+select * from TBTCJOBLOG6
 delete from TBTCJOBLOG7
-select * TBTCJOBLOG7
+select * from TBTCJOBLOG7
 delete from TBTCJOBLOG8
-select * TBTCJOBLOG8
+select * from TBTCJOBLOG8
 delete from TBTCJOBLOG9
-select * TBTCJOBLOG9
+select * from TBTCJOBLOG9
 delete from TBTCO
-select * TBTCO
+select * from TBTCO
 delete from TBTCP
-select * TBTCP
+select * from TBTCP
 delete from TBTCS
-select * TBTCS
+select * from TBTCS
 delete from TPRI_PAR 
-select * TPRI_PAR 
+select * from TPRI_PAR 

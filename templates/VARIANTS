@@ -1,14 +1,14 @@
 delete from TVARVC
-select * TVARVC
+select * from TVARVC
 delete from VARI
-select * VARI
+select * from VARI
 delete from VARID
-select * VARID
+select * from VARID
 delete from VARIDESC
-select * VARIDESC
+select * from VARIDESC
 delete from VARINUM
-select * VARINUM
+select * from VARINUM
 delete from VARIS
-select * VARIS
+select * from VARIS
 delete from VARIT
-select * VARIT
+select * from VARIT

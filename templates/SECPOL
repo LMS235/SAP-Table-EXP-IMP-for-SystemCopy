@@ -1,6 +1,6 @@
 delete from SEC_POLICY_CUST
-select * SEC_POLICY_CUST
+select * from SEC_POLICY_CUST
 delete from SEC_POLICY_CUSTT
-select * SEC_POLICY_CUSTT
+select * from SEC_POLICY_CUSTT
 delete from SEC_POLICY_RT
-select * SEC_POLICY_RT
+select * from SEC_POLICY_RT

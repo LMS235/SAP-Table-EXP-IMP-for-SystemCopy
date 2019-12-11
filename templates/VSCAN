@@ -1,16 +1,16 @@
 delete from VSCAN_GROUP
-select * VSCAN_GROUP
+select * from VSCAN_GROUP
 delete from VSCAN_GROUP_P
-select * VSCAN_GROUP_P
+select * from VSCAN_GROUP_P
 delete from VSCAN_GROUPT
-select * VSCAN_GROUPT
+select * from VSCAN_GROUPT
 delete from VSCAN_PROF
-select * VSCAN_PROF
+select * from VSCAN_PROF
 delete from VSCAN_PROF_GRP
-select * VSCAN_PROF_GRP
+select * from VSCAN_PROF_GRP
 delete from VSCAN_PROF_PAR
-select * VSCAN_PROF_PAR
+select * from VSCAN_PROF_PAR
 delete from VSCAN_PROFT
-select * VSCAN_PROFT
+select * from VSCAN_PROFT
 delete from VSCAN_SERVER
-select * VSCAN_SERVER
+select * from VSCAN_SERVER

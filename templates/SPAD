@@ -1,28 +1,28 @@
 delete from TSP03
-select * TSP03
+select * from TSP03
 delete from TSP03A
-select * TSP03A
+select * from TSP03A
 delete from TSP03C
-select * TSP03C
+select * from TSP03C
 delete from TSP03D
-select * TSP03D
+select * from TSP03D
 delete from TSP03L
-select * TSP03L
+select * from TSP03L
 delete from TSP03POCCNF
-select * TSP03POCCNF
+select * from TSP03POCCNF
 delete from TSP03POCPRE
-select * TSP03POCPRE
+select * from TSP03POCPRE
 delete from TSP03T
-select * TSP03T
+select * from TSP03T
 delete from TSP0B
-select * TSP0B
+select * from TSP0B
 delete from TSP0K
-select * TSP0K
+select * from TSP0K
 delete from TSPCMDS
-select * TSPCMDS
+select * from TSPCMDS
 delete from TSPLOMS
-select * TSPLOMS
+select * from TSPLOMS
 delete from TSPROMS
-select * TSPROMS
+select * from TSPROMS
 delete from TSPSV
-select * TSPSV
+select * from TSPSV

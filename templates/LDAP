@@ -1,20 +1,20 @@
 delete from LDAPGATEW
-select * LDAPGATEW
+select * from LDAPGATEW
 delete from LDAPMAP1
-select * LDAPMAP1
+select * from LDAPMAP1
 delete from LDAPMAP2
-select * LDAPMAP2
+select * from LDAPMAP2
 delete from LDAPMAP3
-select * LDAPMAP3
+select * from LDAPMAP3
 delete from LDAPMAP4
-select * LDAPMAP4
+select * from LDAPMAP4
 delete from LDAPMAP5
-select * LDAPMAP5
+select * from LDAPMAP5
 delete from LDAPMAP6
-select * LDAPMAP6
+select * from LDAPMAP6
 delete from LDAPSERVER
-select * LDAPSERVER
+select * from LDAPSERVER
 delete from LDAPSYNC
-select * LDAPSYNC
+select * from LDAPSYNC
 delete from LDAPUSER
-select * LDAPUSER
+select * from LDAPUSER

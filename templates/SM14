@@ -1,4 +1,4 @@
 delete from APSRV
-select * APSRV
+select * from APSRV
 delete from ASGRP
-select * ASGRP
+select * from ASGRP

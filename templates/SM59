@@ -1,56 +1,56 @@
 delete from APC_CROSS_ORIGIN
-select * APC_CROSS_ORIGIN
+select * from APC_CROSS_ORIGIN
 delete from RFC_TT_ACL
-select * RFC_TT_ACL
+select * from RFC_TT_ACL
 delete from RFC_TT_ACL_HIST
-select * RFC_TT_ACL_HIST
+select * from RFC_TT_ACL_HIST
 delete from RFC_TT_SAMEU
-select * RFC_TT_SAMEU
+select * from RFC_TT_SAMEU
 delete from RFC2SOAPS
-select * RFC2SOAPS
+select * from RFC2SOAPS
 delete from RFCADPTATTR
-select * RFCADPTATTR
+select * from RFCADPTATTR
 delete from RFCATTRIB
-select * RFCATTRIB
+select * from RFCATTRIB
 delete from RFCCAT
-select * RFCCAT
+select * from RFCCAT
 delete from RFCCBWHITELIST
-select * RFCCBWHITELIST
+select * from RFCCBWHITELIST
 delete from RFCCBWHITELIST_A
-select * RFCCBWHITELIST_A
+select * from RFCCBWHITELIST_A
 delete from RFCCHECK
-select * RFCCHECK
+select * from RFCCHECK
 delete from RFCCMC
-select * RFCCMC
+select * from RFCCMC
 delete from RFCDES
-select * RFCDES
+select * from RFCDES
 delete from RFCDESSECU
-select * RFCDESSECU
+select * from RFCDESSECU
 delete from RFCDOC
-select * RFCDOC
+select * from RFCDOC
 delete from RFCGO
-select * RFCGO
+select * from RFCGO
 delete from RFCSOAPS
-select * RFCSOAPS
+select * from RFCSOAPS
 delete from RFCSTXTAB
-select * RFCSTXTAB
+select * from RFCSTXTAB
 delete from RFCSYSACL
-select * RFCSYSACL
+select * from RFCSYSACL
 delete from RFCSYSACL_CLNT
-select * RFCSYSACL_CLNT
+select * from RFCSYSACL_CLNT
 delete from RFCTRUST
-select * RFCTRUST
+select * from RFCTRUST
 delete from RFCTXTAB
-select * RFCTXTAB
+select * from RFCTXTAB
 delete from RFCTYPE
-select * RFCTYPE
+select * from RFCTYPE
 delete from RSECACHK
-select * RSECACHK
+select * from RSECACHK
 delete from RSECACTB
-select * RSECACTB
+select * from RSECACTB
 delete from RSECKEYMETA
-select * RSECKEYMETA
+select * from RSECKEYMETA
 delete from RSECTAB
-select * RSECTAB
+select * from RSECTAB
 delete from SNCSYSACL
-select * SNCSYSACL
+select * from SNCSYSACL

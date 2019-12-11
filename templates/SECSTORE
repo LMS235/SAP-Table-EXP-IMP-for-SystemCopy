@@ -1,6 +1,6 @@
 delete from RSECACTB
-select * RSECACTB
+select * from RSECACTB
 delete from RSECTAB
-select * RSECTAB
+select * from RSECTAB
 delete from RSECKEYMETA
-select * RSECKEYMETA
+select * from RSECKEYMETA

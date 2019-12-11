@@ -1,18 +1,18 @@
 delete from 	BGRFC_CUST_I_DST
-select * 	BGRFC_CUST_I_DST
+select * from 	BGRFC_CUST_I_DST
 delete from 	BGRFC_CUST_I_SRV
-select * 	BGRFC_CUST_I_SRV
+select * from 	BGRFC_CUST_I_SRV
 delete from 	BGRFC_CUST_I_SYS
-select * 	BGRFC_CUST_I_SYS
+select * from 	BGRFC_CUST_I_SYS
 delete from 	BGRFC_CUST_O_DST
-select * 	BGRFC_CUST_O_DST
+select * from 	BGRFC_CUST_O_DST
 delete from 	BGRFC_CUST_O_SRV
-select * 	BGRFC_CUST_O_SRV
+select * from 	BGRFC_CUST_O_SRV
 delete from 	BGRFC_CUST_O_SYS
-select * 	BGRFC_CUST_O_SYS
+select * from 	BGRFC_CUST_O_SYS
 delete from 	BGRFC_CUST_SUPER
-select * 	BGRFC_CUST_SUPER
+select * from 	BGRFC_CUST_SUPER
 delete from 	BGRFC_MAIN_I_DST
-select * 	BGRFC_MAIN_I_DST
+select * from 	BGRFC_MAIN_I_DST
 delete from 	QRFC_CUST_I_DEST
-select * 	QRFC_CUST_I_DEST
+select * from 	QRFC_CUST_I_DEST
