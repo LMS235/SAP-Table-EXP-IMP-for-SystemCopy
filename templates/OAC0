@@ -1,2 +1,4 @@
 delete from TOAAR
 select * from TOAAR
+delete * from TOAOM_C
+select * from TOAOM_C
