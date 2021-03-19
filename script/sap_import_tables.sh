@@ -1,9 +1,11 @@
 #!/bin/bash
-# SAP Table EXP/IMP for SystemCopy (c) Florian Lamml 2020
+# SAP(R) Table EXP/IMP for SystemCopy (c) Florian Lamml 2021
 # www.florian-lamml.de
 # Version 1.0 - Initial Release
 # Version 1.1 - Client Config
 # Version 1.2 - New Tables
+# Version 1.3 - Template Correction
+# Version 1.4 - Minor Corrections
 
 # set config file and delete old one
 export exportedtables=$EXPIMPLOC/exported_tables.conf
@@ -40,8 +42,6 @@ if [ -e $exportedtablesok ]
 		esac
 	done
 fi
-
-
 
 # build list of OK exports for import
 export templist=$EXPIMPLOC/templist.conf
