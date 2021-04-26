@@ -57,6 +57,7 @@ export global_height=30
 export global_width=60
 export global_title="SAP Table EXP/IMP for SystemCopy (c) Florian Lamml 2021"
 export global_backtitle="SAP Table EXP/IMP for SystemCopy (c) Florian Lamml 2021"
+export global_copy="(c) Florian Lamml 2021"
 
 # check export location (and create directory)
 if [ -z "$EXPIMPLOC" ]; 
@@ -113,7 +114,7 @@ chmod u+x $global_pwd/script/sap_export_tables.sh
 chmod u+x $global_pwd/script/sap_import_tables.sh
 
 # EXPORT or IMPORT dialog
-DIALOG=(dialog --title "$global_title" --backtitle "$global_backtitle"  --radiolist  "   _______   ___ \n  / __/ _ | / _ \ \n _\ \/ __ |/ ___/\n/___/_/ |_/_/    \n _________   ___  __   ____\n/_  __/ _ | / _ )/ /  / __/\n / / / __ |/ _  / /__/ _/  \n/_/ /_/ |_/____/____/___/  \n   _____  _____  ______  ______ \n  / __/ |/_/ _ \/  _/  |/  / _ \ \n / _/_>  </ ___// // /|_/ / ___/\n/___/_/|_/_/  /___/_/  /_/_/    \n\nEXPORT or IMPORT Tables?\n\nINFO: $EXPIMPLOCINFO\nINFO: $EXPIMPLOC \n\nCLIENT: $EXPCLIENT\nOS: $OS | USER: $CURUSER | SAPSYSTEM: $SAPSYSTEMNAME\n\n                                (c) Florian Lamml 2019" $global_height $global_width 2)
+DIALOG=(dialog --title "$global_title" --backtitle "$global_backtitle"  --radiolist  "   _______   ___ \n  / __/ _ | / _ \ \n _\ \/ __ |/ ___/\n/___/_/ |_/_/    \n _________   ___  __   ____\n/_  __/ _ | / _ )/ /  / __/\n / / / __ |/ _  / /__/ _/  \n/_/ /_/ |_/____/____/___/  \n   _____  _____  ______  ______ \n  / __/ |/_/ _ \/  _/  |/  / _ \ \n / _/_>  </ ___// // /|_/ / ___/\n/___/_/|_/_/  /___/_/  /_/_/    \n\nEXPORT or IMPORT Tables?\n\nINFO: $EXPIMPLOCINFO\nINFO: $EXPIMPLOC \n\nCLIENT: $EXPCLIENT\nOS: $OS | USER: $CURUSER | SAPSYSTEM: $SAPSYSTEMNAME\n\n                                $global_copy" $global_height $global_width 2)
 OPTIONS=("EXPORT" "Export SAP Tables" on "IMPORT" "Import SAP Tables" off)
 EXPORIMP=$("${DIALOG[@]}" "${OPTIONS[@]}" 2>&1 >/dev/tty)
 # check ESC hit
