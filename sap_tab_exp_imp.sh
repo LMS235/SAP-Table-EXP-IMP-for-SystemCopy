@@ -1,11 +1,12 @@
 #!/bin/bash
-# SAP(R) Table EXP/IMP for SystemCopy (c) Florian Lamml 2021
+# SAP(R) Table EXP/IMP for SystemCopy (c) Florian Lamml 2023
 # www.florian-lamml.de
 # Version 1.0 - Initial Release
 # Version 1.1 - Client Config
 # Version 1.2 - New Tables
 # Version 1.3 - Template Correction
 # Version 1.4 - Minor Corrections
+# Version 1.5 - Cloud ALM Template
 
 ##### CONFIG EXPORT / IMPORT LOCATION #####
 export EXPIMPLOC=
