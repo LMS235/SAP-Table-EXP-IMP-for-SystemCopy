@@ -1,60 +1,60 @@
-delete from /SDF/DCOBQHDR
-select * from /SDF/DCOBQHDR
-delete from /SDF/DCRUNNING
-select * from /SDF/DCRUNNING
-delete from /SDF/DCCCONFIG
-select * from /SDF/DCCCONFIG
-delete from /SDF/DCCLOGDET
-select * from /SDF/DCCLOGDET
-delete from /SDF/DCCLOGHDR
-select * from /SDF/DCCLOGHDR
-delete from /SDF/DCKPICFG
-select * from /SDF/DCKPICFG
-delete from /SDF/DCOBQDATA
-select * from /SDF/DCOBQDATA
-delete from /SDF/DCPARAMCFG
-select * from /SDF/DCPARAMCFG
-delete from /SDF/AJM_JOBS
-select * from /SDF/AJM_JOBS
-delete from /SDF/AJM_SCHEDUL
-select * from /SDF/AJM_SCHEDUL
-delete from /SDF/AJM_SYNC_PT
-select * from /SDF/AJM_SYNC_PT
-delete from /SDF/AJM_JOBS_P
-select * from /SDF/AJM_JOBS_P
-delete from /SDF/AJM_GRP_JOB
-select * from /SDF/AJM_GRP_JOB
-delete from /SDF/AJMF_JOBS
-select * from /SDF/AJMF_JOBS
-delete from /SDF/AJMF_GR_JOB
-select * from /SDF/AJMF_GR_JOB
-delete from /SDF/AJMF_JOBS_P
-select * from /SDF/AJMF_JOBS_P
-delete from /SDF/AJMF_SCHEDU
-select * from /SDF/AJMF_SCHEDU
-delete from /SDF/AJM_PJOBS
-select * from /SDF/AJM_PJOBS
-delete from /SDF/KPICINTRVL
-select * from /SDF/KPICINTRVL
-delete from /SDF/CALM_CDMI
-select * from /SDF/CALM_CDMI
-delete from /SDF/CDM_IMPORTS
-select * from /SDF/CDM_IMPORTS
-delete from /SDF/CDM_CRT_TR
-select * from /SDF/CDM_CRT_TR
-delete from /SDF/CALM_SCHED
-select * from /SDF/CALM_SCHED
-delete from /SDF/CATEGORY
-select * from /SDF/CATEGORY
-delete from /SDF/IM_PUSH_ERR
-select * from /SDF/IM_PUSH_ERR
-delete from /SDF/CALM_ID
-select * from /SDF/CALM_ID
-delete from /SDF/CALM_CONFIG
-select * from /SDF/CALM_CONFIG
-delete from /SDF/CALM_INST
-select * from /SDF/CALM_INST
-delete from /SDF/CALM_QGROUP
-select * from /SDF/CALM_QGROUP
-delete from /SDF/EXM_EXT_IDS
-select * from /SDF/EXM_EXT_IDS
+delete from "/SDF/DCOBQHDR"
+select * from "/SDF/DCOBQHDR"
+delete from "/SDF/DCRUNNING"
+select * from "/SDF/DCRUNNING"
+delete from "/SDF/DCCCONFIG"
+select * from "/SDF/DCCCONFIG"
+delete from "/SDF/DCCLOGDET"
+select * from "/SDF/DCCLOGDET"
+delete from "/SDF/DCCLOGHDR"
+select * from "/SDF/DCCLOGHDR"
+delete from "/SDF/DCKPICFG"
+select * from "/SDF/DCKPICFG"
+delete from "/SDF/DCOBQDATA"
+select * from "/SDF/DCOBQDATA"
+delete from "/SDF/DCPARAMCFG"
+select * from "/SDF/DCPARAMCFG"
+delete from "/SDF/AJM_JOBS"
+select * from "/SDF/AJM_JOBS"
+delete from "/SDF/AJM_SCHEDUL"
+select * from "/SDF/AJM_SCHEDUL"
+delete from "/SDF/AJM_SYNC_PT"
+select * from "/SDF/AJM_SYNC_PT"
+delete from "/SDF/AJM_JOBS_P"
+select * from "/SDF/AJM_JOBS_P"
+delete from "/SDF/AJM_GRP_JOB"
+select * from "/SDF/AJM_GRP_JOB"
+delete from "/SDF/AJMF_JOBS"
+select * from "/SDF/AJMF_JOBS"
+delete from "/SDF/AJMF_GR_JOB"
+select * from "/SDF/AJMF_GR_JOB"
+delete from "/SDF/AJMF_JOBS_P"
+select * from "/SDF/AJMF_JOBS_P"
+delete from "/SDF/AJMF_SCHEDU"
+select * from "/SDF/AJMF_SCHEDU"
+delete from "/SDF/AJM_PJOBS"
+select * from "/SDF/AJM_PJOBS"
+delete from "/SDF/KPICINTRVL"
+select * from "/SDF/KPICINTRVL"
+delete from "/SDF/CALM_CDMI"
+select * from "/SDF/CALM_CDMI"
+delete from "/SDF/CDM_IMPORTS"
+select * from "/SDF/CDM_IMPORTS"
+delete from "/SDF/CDM_CRT_TR"
+select * from "/SDF/CDM_CRT_TR"
+delete from "/SDF/CALM_SCHED"
+select * from "/SDF/CALM_SCHED"
+delete from "/SDF/CATEGORY"
+select * from "/SDF/CATEGORY"
+delete from "/SDF/IM_PUSH_ERR"
+select * from "/SDF/IM_PUSH_ERR"
+delete from "/SDF/CALM_ID"
+select * from "/SDF/CALM_ID"
+delete from "/SDF/CALM_CONFIG"
+select * from "/SDF/CALM_CONFIG"
+delete from "/SDF/CALM_INST"
+select * from "/SDF/CALM_INST"
+delete from "/SDF/CALM_QGROUP"
+select * from "/SDF/CALM_QGROUP"
+delete from "/SDF/EXM_EXT_IDS"
+select * from "/SDF/EXM_EXT_IDS"
