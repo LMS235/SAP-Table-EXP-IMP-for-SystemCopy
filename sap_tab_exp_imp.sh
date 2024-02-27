@@ -1,5 +1,5 @@
 #!/bin/bash
-# SAP(R) Table EXP/IMP for SystemCopy (c) Florian Lamml 2023
+# SAP(R) Table EXP/IMP for SystemCopy (c) Florian Lamml 2024
 # www.florian-lamml.de
 # Version 1.0 - Initial Release
 # Version 1.1 - Client Config
@@ -24,7 +24,7 @@ export EXPCLIENT=ALL
 # you have to run it as "sidadm"
 # it use the normal R3trans for export
 # and import with template files
-####################(c) Florian Lamml 2021#
+####################(c) Florian Lamml 2024#
 
 # Prerequisites ###########################
 # need 'dialog' to run
@@ -56,9 +56,9 @@ export EXPCLIENT=ALL
 export global_pwd=$(pwd)
 export global_height=30
 export global_width=60
-export global_title="SAP Table EXP/IMP for SystemCopy (c) Florian Lamml 2021"
-export global_backtitle="SAP Table EXP/IMP for SystemCopy (c) Florian Lamml 2021"
-export global_copy="(c) Florian Lamml 2021"
+export global_title="SAP Table EXP/IMP for SystemCopy (c) Florian Lamml 2024"
+export global_backtitle="SAP Table EXP/IMP for SystemCopy (c) Florian Lamml 2024"
+export global_copy="(c) Florian Lamml 2024"
 
 # check export location (and create directory)
 if [ -z "$EXPIMPLOC" ]; 

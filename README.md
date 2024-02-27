@@ -1,6 +1,6 @@
 # SAP-Table-EXP-IMP-for-SystemCopy
 
-SAP(R) Table EXP/IMP for SystemCopy (c) Florian Lamml 2021
+SAP(R) Table EXP/IMP for SystemCopy (c) Florian Lamml 2024
 
 www.florian-lamml.de
 
