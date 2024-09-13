@@ -57,8 +57,9 @@ export EXPCLIENT=ALL
 
 # set global variables
 export global_pwd=$(pwd)
-export global_height=30
-export global_width=60
+export global_height=45
+export global_width=80
+export global_list=35
 export global_title="SAP Table EXP/IMP for SystemCopy (c) Florian Lamml 2024"
 export global_backtitle="SAP Table EXP/IMP for SystemCopy (c) Florian Lamml 2024"
 export global_copy="(c) Florian Lamml 2024"

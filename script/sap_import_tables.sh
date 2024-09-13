@@ -6,6 +6,10 @@
 # Version 1.2 - New Tables
 # Version 1.3 - Template Correction
 # Version 1.4 - Minor Corrections
+# Version 1.5 - Cloud ALM Template
+# Version 1.6 - Corrections Cloud ALM and GTS Template
+# Version 1.7 - More Templates
+# Version 1.7.1 - More Templates Correction
 
 # set config file and delete old one
 export exportedtables=$EXPIMPLOC/exported_tables.conf
@@ -70,7 +74,7 @@ do
 done < $exportedtablesok
 
 # select exported tables for import
-dialog --title "$global_title" --backtitle "$global_backtitle" --separate-output --checklist "Select the exports to import:" $global_height $global_width 24 ${IMPORTEDTABLES[@]:1:$IMPORTEDTABLESCOUNTER} 2> $importtables
+dialog --title "$global_title" --backtitle "$global_backtitle" --separate-output --checklist "Select the exports to import:" $global_height $global_width $global_list ${IMPORTEDTABLES[@]:1:$IMPORTEDTABLESCOUNTER} 2> $importtables
 if [ $? -ne 0 ]
  then
 	echo "ERROR: import select error" >> $EXPIMPLOGFILE

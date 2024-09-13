@@ -6,6 +6,10 @@
 # Version 1.2 - New Tables
 # Version 1.3 - Template Correction
 # Version 1.4 - Minor Corrections
+# Version 1.5 - Cloud ALM Template
+# Version 1.6 - Corrections Cloud ALM and GTS Template
+# Version 1.7 - More Templates
+# Version 1.7.1 - More Templates Correction
 
 # set config file and delete old one
 export selectedtablesforexport=$EXPIMPLOC/selected_tables_for_export.conf
@@ -48,7 +52,7 @@ do
 done
 
 # selet the templates
-dialog --title "$global_title" --backtitle "$global_backtitle" --separate-output --checklist "Select the Templates for Export:" $global_height $global_width 24 ${TEMPLATE[@]:1:$TEMPLATECOUNTER} 2> $selectedtablesforexport
+dialog --title "$global_title" --backtitle "$global_backtitle" --separate-output --checklist "Select the Templates for Export:" $global_height $global_width $global_list ${TEMPLATE[@]:1:$TEMPLATECOUNTER} 2> $selectedtablesforexport
 if [ $? -ne 0 ]
  then
     echo "ERROR: fail to select templates for export" >> $EXPIMPLOGFILE
