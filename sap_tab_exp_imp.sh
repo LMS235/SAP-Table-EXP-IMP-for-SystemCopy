@@ -9,6 +9,7 @@
 # Version 1.5 - Cloud ALM Template
 # Version 1.6 - Corrections Cloud ALM and GTS Template
 # Version 1.7 - More Templates
+# Version 1.7.1 - More Templates Correction
 
 ##### CONFIG EXPORT / IMPORT LOCATION #####
 export EXPIMPLOC=

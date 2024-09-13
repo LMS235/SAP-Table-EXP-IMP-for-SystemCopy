@@ -12,6 +12,7 @@ www.florian-lamml.de
  - Version 1.5 - Cloud ALM Template
  - Version 1.6 - Corrections Cloud ALM and GTS Template
  - Version 1.7 - More Templates
+ - Version 1.7.1 - More Templates Correction
 
 `copy to your Unix / Linux Server and run sap_tab_exp_imp.sh`
 
