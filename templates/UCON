@@ -1,0 +1,132 @@
+delete from HTTP_ADMIN_LIST
+select * from HTTP_ADMIN_LIST
+delete from HTTP_CHW_LOG_ADM
+select * from HTTP_CHW_LOG_ADM
+delete from HTTP_CHW_LOG_MA
+select * from HTTP_CHW_LOG_MA
+delete from HTTP_CHW_LOG_MW
+select * from HTTP_CHW_LOG_MW
+delete from HTTP_CHW_LOG_SET
+select * from HTTP_CHW_LOG_SET
+delete from HTTP_CHW_LOG_WHI
+select * from HTTP_CHW_LOG_WHI
+delete from HTTP_CHW_SETUP
+select * from HTTP_CHW_SETUP
+delete from HTTP_ENTRY_CONV
+select * from HTTP_ENTRY_CONV
+delete from HTTP_LOG_LIST
+select * from HTTP_LOG_LIST
+delete from HTTP_MADMIN_LIST
+select * from HTTP_MADMIN_LIST
+delete from HTTP_MLOG_LIST
+select * from HTTP_MLOG_LIST
+delete from HTTP_MSUPP_LIST
+select * from HTTP_MSUPP_LIST
+delete from HTTP_MWHITE_LIST
+select * from HTTP_MWHITE_LIST
+delete from HTTP_SUPP_LIST
+select * from HTTP_SUPP_LIST
+delete from HTTP_WHITE_LIST
+select * from HTTP_WHITE_LIST
+delete from RFC_BL_SERVER
+select * from RFC_BL_SERVER
+delete from RFC_BL_SERVERC
+select * from RFC_BL_SERVERC
+delete from UCON_CA_CA
+select * from UCON_CA_CA
+delete from UCON_CA_RFC
+select * from UCON_CA_RFC
+delete from UCON_CA_RFCFUNC
+select * from UCON_CA_RFCFUNC
+delete from UCON_CHANGE_DOC
+select * from UCON_CHANGE_DOC
+delete from UCON_MONI_TS
+select * from UCON_MONI_TS
+delete from UCONCACONFIGRT
+select * from UCONCACONFIGRT
+delete from UCONCAICFSRVRT
+select * from UCONCAICFSRVRT
+delete from UCONCAVHOSTRT
+select * from UCONCAVHOSTRT
+delete from UCONCFGPROFILERT
+select * from UCONCFGPROFILERT
+delete from UCONCONFRT
+select * from UCONCONFRT
+delete from UCONCUSTLOGON
+select * from UCONCUSTLOGON
+delete from UCONFILLCUST
+select * from UCONFILLCUST
+delete from UCONHTTPCLNTSRT
+select * from UCONHTTPCLNTSRT
+delete from UCONHTTPMAINRT
+select * from UCONHTTPMAINRT
+delete from UCONHTTPRTMAIN
+select * from UCONHTTPRTMAIN
+delete from UCONHTTPRTURL
+select * from UCONHTTPRTURL
+delete from UCONHTTPURLRT
+select * from UCONHTTPURLRT
+delete from UCONICFALIAS
+select * from UCONICFALIAS
+delete from UCONINCLCART
+select * from UCONINCLCART
+delete from UCONIPVHOSTRT
+select * from UCONIPVHOSTRT
+delete from UCONPRODCLNTSRT
+select * from UCONPRODCLNTSRT
+delete from UCONREGISTRY
+select * from UCONREGISTRY
+delete from UCONREGISTRYCLI
+select * from UCONREGISTRYCLI
+delete from UCONRFCCART
+select * from UCONRFCCART
+delete from UCONRFCCFGRT
+select * from UCONRFCCFGRT
+delete from UCONRFCCUSTHEAD
+select * from UCONRFCCUSTHEAD
+delete from UCONRFCPROFCFGRT
+select * from UCONRFCPROFCFGRT
+delete from UCONRFCSCENARIOS
+select * from UCONRFCSCENARIOS
+delete from UCONRFCSERVCUST
+select * from UCONRFCSERVCUST
+delete from UCONRFCSERVHEAD
+select * from UCONRFCSERVHEAD
+delete from UCONRFCSERVTEXT
+select * from UCONRFCSERVTEXT
+delete from UCONRFCSRVFMRT
+select * from UCONRFCSRVFMRT
+delete from UCONRFCSRVMAINRT
+select * from UCONRFCSRVMAINRT
+delete from UCONRFCSRVRT
+select * from UCONRFCSRVRT
+delete from UCONRFCSTATEHEAD
+select * from UCONRFCSTATEHEAD
+delete from UCONRFCSTATEPHAS
+select * from UCONRFCSTATEPHAS
+delete from UCONRFCSTATERT
+select * from UCONRFCSTATERT
+delete from UCONRFMCALLERATT
+select * from UCONRFMCALLERATT
+delete from UCONSERVASHEAD
+select * from UCONSERVASHEAD
+delete from UCONSERVASTEXT
+select * from UCONSERVASTEXT
+delete from UCONSERVRT
+select * from UCONSERVRT
+delete from UCONSRVCART
+select * from UCONSRVCART
+delete from UCONSTATEHTTPWL
+select * from UCONSTATEHTTPWL
+delete from UCONSTATETRANSWL
+select * from UCONSTATETRANSWL
+delete from UCONSTATINCIDENT
+select * from UCONSTATINCIDENT
+delete from UCONSTATMONITORA
+select * from UCONSTATMONITORA
+delete from UCONSTATPROTOCOL
+select * from UCONSTATPROTOCOL
+delete from UCONURLVHRT
+select * from UCONURLVHRT
+delete from UCONURLVHRTCNT
+select * from UCONURLVHRTCNT

@@ -1,0 +1,12 @@
+delete from SACF_ALERT
+select * from SACF_ALERT
+delete from TOBJ_CHK_CTRL_D
+select * from TOBJ_CHK_CTRL_D
+delete from TOBJ_CHK_CTRL_DH
+select * from TOBJ_CHK_CTRL_DH
+delete from TOBJ_CHK_CTRL_DT
+select * from TOBJ_CHK_CTRL_DT
+delete from TOBJ_CHK_CTRL_R
+select * from TOBJ_CHK_CTRL_R
+delete from TOBJ_CHK_CTRL_RH
+select * from TOBJ_CHK_CTRL_RH

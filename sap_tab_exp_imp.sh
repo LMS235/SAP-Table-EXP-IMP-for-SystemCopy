@@ -7,6 +7,8 @@
 # Version 1.3 - Template Correction
 # Version 1.4 - Minor Corrections
 # Version 1.5 - Cloud ALM Template
+# Version 1.6 - Corrections Cloud ALM and GTS Template
+# Version 1.7 - More Templates
 
 ##### CONFIG EXPORT / IMPORT LOCATION #####
 export EXPIMPLOC=

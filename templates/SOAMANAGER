@@ -1,0 +1,592 @@
+delete from SDB_DOCU_SERVER
+select * from SDB_DOCU_SERVER
+delete from SDB_ER_PARAMETER
+select * from SDB_ER_PARAMETER
+delete from SDB_INDUSTRY
+select * from SDB_INDUSTRY
+delete from SDB_INDUSTRY_T
+select * from SDB_INDUSTRY_T
+delete from SDB_PUB_RULE
+select * from SDB_PUB_RULE
+delete from SRT_ALT_HOSTS
+select * from SRT_ALT_HOSTS
+delete from SRT_ASSIGN_DATA
+select * from SRT_ASSIGN_DATA
+delete from SRT_ASSIGN_DIR
+select * from SRT_ASSIGN_DIR
+delete from SRT_ASSIGN_DIR_T
+select * from SRT_ASSIGN_DIR_T
+delete from SRT_AU_TEST_RECI
+select * from SRT_AU_TEST_RECI
+delete from SRT_CACHE
+select * from SRT_CACHE
+delete from SRT_CC_CHANGES
+select * from SRT_CC_CHANGES
+delete from SRT_CC_CHANGES_H
+select * from SRT_CC_CHANGES_H
+delete from SRT_CC_MIF_CDATA
+select * from SRT_CC_MIF_CDATA
+delete from SRT_CC_MIF_CDIR
+select * from SRT_CC_MIF_CDIR
+delete from SRT_CC_MIF_LDATA
+select * from SRT_CC_MIF_LDATA
+delete from SRT_CC_PC
+select * from SRT_CC_PC
+delete from SRT_CC_PP
+select * from SRT_CC_PP
+delete from SRT_CC_ST_ACT
+select * from SRT_CC_ST_ACT
+delete from SRT_CDTC
+select * from SRT_CDTC
+delete from SRT_CDTC_C_DET
+select * from SRT_CDTC_C_DET
+delete from SRT_CDTC_CF_DET
+select * from SRT_CDTC_CF_DET
+delete from SRT_CDTC_CHG_ID
+select * from SRT_CDTC_CHG_ID
+delete from SRT_CDTC_CI_DET
+select * from SRT_CDTC_CI_DET
+delete from SRT_CDTC_CO_DET
+select * from SRT_CDTC_CO_DET
+delete from SRT_CDTC_DESCR_T
+select * from SRT_CDTC_DESCR_T
+delete from SRT_CDTC_EP_DET
+select * from SRT_CDTC_EP_DET
+delete from SRT_CDTC_G_DET
+select * from SRT_CDTC_G_DET
+delete from SRT_CDTC_IS_DET
+select * from SRT_CDTC_IS_DET
+delete from SRT_CDTC_S_DET
+select * from SRT_CDTC_S_DET
+delete from SRT_CDTC_SC_DET
+select * from SRT_CDTC_SC_DET
+delete from SRT_CDTC_STATE
+select * from SRT_CDTC_STATE
+delete from SRT_CF_DET_A
+select * from SRT_CF_DET_A
+delete from SRT_CF_DET_HDR
+select * from SRT_CF_DET_HDR
+delete from SRT_CF_DET_R
+select * from SRT_CF_DET_R
+delete from SRT_CF_DET_S
+select * from SRT_CF_DET_S
+delete from SRT_CF_FALLBACK
+select * from SRT_CF_FALLBACK
+delete from SRT_CFG_BNDG
+select * from SRT_CFG_BNDG
+delete from SRT_CFG_CFGVAL
+select * from SRT_CFG_CFGVAL
+delete from SRT_CFG_CHG_TAB
+select * from SRT_CFG_CHG_TAB
+delete from SRT_CFG_CLI_ASGN
+select * from SRT_CFG_CLI_ASGN
+delete from SRT_CFG_DATA
+select * from SRT_CFG_DATA
+delete from SRT_CFG_DEF_ASGN
+select * from SRT_CFG_DEF_ASGN
+delete from SRT_CFG_DIR
+select * from SRT_CFG_DIR
+delete from SRT_CFG_DIR_T
+select * from SRT_CFG_DIR_T
+delete from SRT_CFG_ICF_DET
+select * from SRT_CFG_ICF_DET
+delete from SRT_CFG_ICF_USE
+select * from SRT_CFG_ICF_USE
+delete from SRT_CFG_LOG_HDR
+select * from SRT_CFG_LOG_HDR
+delete from SRT_CFG_LOG_ITEM
+select * from SRT_CFG_LOG_ITEM
+delete from SRT_CFG_LOG_SRCH
+select * from SRT_CFG_LOG_SRCH
+delete from SRT_CFG_MLP_DATA
+select * from SRT_CFG_MLP_DATA
+delete from SRT_CFG_SRV_ASGN
+select * from SRT_CFG_SRV_ASGN
+delete from SRT_CFG_STS_ASGN
+select * from SRT_CFG_STS_ASGN
+delete from SRT_CFG_SV_ASN_T
+select * from SRT_CFG_SV_ASN_T
+delete from SRT_CFG_TPLC_DAT
+select * from SRT_CFG_TPLC_DAT
+delete from SRT_CFG_TPLC_DIR
+select * from SRT_CFG_TPLC_DIR
+delete from SRT_CFG_TRC
+select * from SRT_CFG_TRC
+delete from SRT_CFG_TRC_ADM
+select * from SRT_CFG_TRC_ADM
+delete from SRT_CFG_VAL_DET
+select * from SRT_CFG_VAL_DET
+delete from SRT_CFG_VAL_DIR
+select * from SRT_CFG_VAL_DIR
+delete from SRT_CFG_VAL_UPD
+select * from SRT_CFG_VAL_UPD
+delete from SRT_CFG_VALUES
+select * from SRT_CFG_VALUES
+delete from SRT_CG_SYST_ATTR
+select * from SRT_CG_SYST_ATTR
+delete from SRT_CG_SYST_DIR
+select * from SRT_CG_SYST_DIR
+delete from SRT_CG_WSDL_CONT
+select * from SRT_CG_WSDL_CONT
+delete from SRT_CG_WSDL_URL
+select * from SRT_CG_WSDL_URL
+delete from SRT_CHECK_HEADER
+select * from SRT_CHECK_HEADER
+delete from SRT_CHECK_RESULT
+select * from SRT_CHECK_RESULT
+delete from SRT_CHECK_STATUS
+select * from SRT_CHECK_STATUS
+delete from SRT_CLI_NR
+select * from SRT_CLI_NR
+delete from SRT_CM_CHANGE
+select * from SRT_CM_CHANGE
+delete from SRT_CM_CHANGE_CD
+select * from SRT_CM_CHANGE_CD
+delete from SRT_CM_CHG_ITEM
+select * from SRT_CM_CHG_ITEM
+delete from SRT_CM_DELTA
+select * from SRT_CM_DELTA
+delete from SRT_CM_NOTIFY
+select * from SRT_CM_NOTIFY
+delete from SRT_CM_QUEUE
+select * from SRT_CM_QUEUE
+delete from SRT_CM_QUEUE_ITM
+select * from SRT_CM_QUEUE_ITM
+delete from SRT_CM_RUN
+select * from SRT_CM_RUN
+delete from SRT_CM_RUN_Q
+select * from SRT_CM_RUN_Q
+delete from SRT_CNTRL_TASKS
+select * from SRT_CNTRL_TASKS
+delete from SRT_CON_SYSTEMS
+select * from SRT_CON_SYSTEMS
+delete from SRT_CONDITIONS
+select * from SRT_CONDITIONS
+delete from SRT_CSD_DIR
+select * from SRT_CSD_DIR
+delete from SRT_CTRL_TSK_MSG
+select * from SRT_CTRL_TSK_MSG
+delete from SRT_DEST_CFGV
+select * from SRT_DEST_CFGV
+delete from SRT_DEST_DATA
+select * from SRT_DEST_DATA
+delete from SRT_DEST_DIR
+select * from SRT_DEST_DIR
+delete from SRT_DEST_DIR_T
+select * from SRT_DEST_DIR_T
+delete from SRT_DEST_DIR_V
+select * from SRT_DEST_DIR_V
+delete from SRT_DEST_WSDL
+select * from SRT_DEST_WSDL
+delete from SRT_DOMAIN_SYS
+select * from SRT_DOMAIN_SYS
+delete from SRT_DOMAIN_SYS_T
+select * from SRT_DOMAIN_SYS_T
+delete from SRT_DOMN_DIR
+select * from SRT_DOMN_DIR
+delete from SRT_DOMN_DIR_T
+select * from SRT_DOMN_DIR_T
+delete from SRT_DOMN_SYSTS
+select * from SRT_DOMN_SYSTS
+delete from SRT_DT_CFG_DATA
+select * from SRT_DT_CFG_DATA
+delete from SRT_DT_CFG_DIR
+select * from SRT_DT_CFG_DIR
+delete from SRT_DT_CFG_DIR_T
+select * from SRT_DT_CFG_DIR_T
+delete from SRT_DT_CHG_DIR
+select * from SRT_DT_CHG_DIR
+delete from SRT_DT_CHG_DIR_L
+select * from SRT_DT_CHG_DIR_L
+delete from SRT_DT_CHG_STAT
+select * from SRT_DT_CHG_STAT
+delete from SRT_DT_CHG_STATL
+select * from SRT_DT_CHG_STATL
+delete from SRT_DT_IMAGE
+select * from SRT_DT_IMAGE
+delete from SRT_FALLBACK_LPS
+select * from SRT_FALLBACK_LPS
+delete from SRT_FW_SETTINGS
+select * from SRT_FW_SETTINGS
+delete from SRT_GEN_CLNT_DIR
+select * from SRT_GEN_CLNT_DIR
+delete from SRT_GRP_DOMSYS
+select * from SRT_GRP_DOMSYS
+delete from SRT_GRP_DOMSYS_A
+select * from SRT_GRP_DOMSYS_A
+delete from SRT_GRP_DOMSYS_T
+select * from SRT_GRP_DOMSYS_T
+delete from SRT_IBC
+select * from SRT_IBC
+delete from SRT_IBC_ASSIGN
+select * from SRT_IBC_ASSIGN
+delete from SRT_IBC_DET
+select * from SRT_IBC_DET
+delete from SRT_IBC_RT
+select * from SRT_IBC_RT
+delete from SRT_IBC_RTD_1
+select * from SRT_IBC_RTD_1
+delete from SRT_IBC_RTD_2
+select * from SRT_IBC_RTD_2
+delete from SRT_IBC_T
+select * from SRT_IBC_T
+delete from SRT_IBCR
+select * from SRT_IBCR
+delete from SRT_IBCR_ASSIGN
+select * from SRT_IBCR_ASSIGN
+delete from SRT_IBCR_RT
+select * from SRT_IBCR_RT
+delete from SRT_IBCR_T
+select * from SRT_IBCR_T
+delete from SRT_IBCR_TYPES
+select * from SRT_IBCR_TYPES
+delete from SRT_IBCR_USAGE
+select * from SRT_IBCR_USAGE
+delete from SRT_IDENTIFIER
+select * from SRT_IDENTIFIER
+delete from SRT_ISO_SET_C
+select * from SRT_ISO_SET_C
+delete from SRT_ISO_SET_P
+select * from SRT_ISO_SET_P
+delete from SRT_LOG_TENANT
+select * from SRT_LOG_TENANT
+delete from SRT_LOG_TENANT_R
+select * from SRT_LOG_TENANT_R
+delete from SRT_LP
+select * from SRT_LP
+delete from SRT_LP_FEAT
+select * from SRT_LP_FEAT
+delete from SRT_LP_OP_FEAT
+select * from SRT_LP_OP_FEAT
+delete from SRT_LP_SXI_ADDR
+select * from SRT_LP_SXI_ADDR
+delete from SRT_LP_T
+select * from SRT_LP_T
+delete from SRT_LP_URL_ASGN
+select * from SRT_LP_URL_ASGN
+delete from SRT_LRD_HEADER
+select * from SRT_LRD_HEADER
+delete from SRT_LRD_ROUTIBCR
+select * from SRT_LRD_ROUTIBCR
+delete from SRT_LRD_ROUTING
+select * from SRT_LRD_ROUTING
+delete from SRT_MED_SYS
+select * from SRT_MED_SYS
+delete from SRT_MED_SYS_T
+select * from SRT_MED_SYS_T
+delete from SRT_MIG_HIST
+select * from SRT_MIG_HIST
+delete from SRT_NAME_CACHE
+select * from SRT_NAME_CACHE
+delete from SRT_OBSERV_DATA
+select * from SRT_OBSERV_DATA
+delete from SRT_PEND_TASK
+select * from SRT_PEND_TASK
+delete from SRT_PRF_CFG_DIR
+select * from SRT_PRF_CFG_DIR
+delete from SRT_PRF_CFGVAL
+select * from SRT_PRF_CFGVAL
+delete from SRT_PRF_DATA
+select * from SRT_PRF_DATA
+delete from SRT_PRF_DIR
+select * from SRT_PRF_DIR
+delete from SRT_PRF_DIR_T
+select * from SRT_PRF_DIR_T
+delete from SRT_PRF_DIR_V
+select * from SRT_PRF_DIR_V
+delete from SRT_PRO_WKL
+select * from SRT_PRO_WKL
+delete from SRT_PROF_ASSIGN
+select * from SRT_PROF_ASSIGN
+delete from SRT_PRULE_ASSIGN
+select * from SRT_PRULE_ASSIGN
+delete from SRT_PRULE_DATA
+select * from SRT_PRULE_DATA
+delete from SRT_PRULE_DIR
+select * from SRT_PRULE_DIR
+delete from SRT_PRX_CLNT_DIR
+select * from SRT_PRX_CLNT_DIR
+delete from SRT_PRX_EX_CHECK
+select * from SRT_PRX_EX_CHECK
+delete from SRT_PT_INDEX
+select * from SRT_PT_INDEX
+delete from SRT_PX_MSG_ASGN
+select * from SRT_PX_MSG_ASGN
+delete from SRT_REG_ADRMAP
+select * from SRT_REG_ADRMAP
+delete from SRT_REG_BACKUPR
+select * from SRT_REG_BACKUPR
+delete from SRT_REG_BIND
+select * from SRT_REG_BIND
+delete from SRT_REG_CONFIG
+select * from SRT_REG_CONFIG
+delete from SRT_REG_OPERAT
+select * from SRT_REG_OPERAT
+delete from SRT_REGISTRY
+select * from SRT_REGISTRY
+delete from SRT_REGISTRYT
+select * from SRT_REGISTRYT
+delete from SRT_REQ_CB_DATA
+select * from SRT_REQ_CB_DATA
+delete from SRT_REQ_CB_DIR
+select * from SRT_REQ_CB_DIR
+delete from SRT_REQ_CB_DIR_T
+select * from SRT_REQ_CB_DIR_T
+delete from SRT_REQ_D_CI_CON
+select * from SRT_REQ_D_CI_CON
+delete from SRT_REQ_D_CI_PRO
+select * from SRT_REQ_D_CI_PRO
+delete from SRT_REQ_DATA_C
+select * from SRT_REQ_DATA_C
+delete from SRT_REQ_DATA_CON
+select * from SRT_REQ_DATA_CON
+delete from SRT_REQ_DATA_P
+select * from SRT_REQ_DATA_P
+delete from SRT_REQ_DATA_PIF
+select * from SRT_REQ_DATA_PIF
+delete from SRT_REQ_DATA_PRO
+select * from SRT_REQ_DATA_PRO
+delete from SRT_REQ_DIR
+select * from SRT_REQ_DIR
+delete from SRT_REQ_DIR_T
+select * from SRT_REQ_DIR_T
+delete from SRT_REV_PROXY
+select * from SRT_REV_PROXY
+delete from SRT_RTC_BNDG
+select * from SRT_RTC_BNDG
+delete from SRT_RTC_CFGVAL
+select * from SRT_RTC_CFGVAL
+delete from SRT_RTC_CG_DATA
+select * from SRT_RTC_CG_DATA
+delete from SRT_RTC_CG_DATAL
+select * from SRT_RTC_CG_DATAL
+delete from SRT_RTC_CG_DIR
+select * from SRT_RTC_CG_DIR
+delete from SRT_RTC_DATA
+select * from SRT_RTC_DATA
+delete from SRT_RTC_DATA_RT
+select * from SRT_RTC_DATA_RT
+delete from SRT_RTC_DATAL
+select * from SRT_RTC_DATAL
+delete from SRT_RTC_DIR
+select * from SRT_RTC_DIR
+delete from SRT_RTC_DT_IF_SD
+select * from SRT_RTC_DT_IF_SD
+delete from SRT_RTC_DT_RT
+select * from SRT_RTC_DT_RT
+delete from SRT_RTC_DT_RT_MD
+select * from SRT_RTC_DT_RT_MD
+delete from SRT_RTC_WSIL
+select * from SRT_RTC_WSIL
+delete from SRT_RTC_WSILL
+select * from SRT_RTC_WSILL
+delete from SRT_SAVED_SEARCH
+select * from SRT_SAVED_SEARCH
+delete from SRT_SCP_ASSIGN
+select * from SRT_SCP_ASSIGN
+delete from SRT_SDN_URL_C
+select * from SRT_SDN_URL_C
+delete from SRT_SECSTORE_LNK
+select * from SRT_SECSTORE_LNK
+delete from SRT_SOAM_CONNECT
+select * from SRT_SOAM_CONNECT
+delete from SRT_SR_CHNGE_KEY
+select * from SRT_SR_CHNGE_KEY
+delete from SRT_SR_CL_HIER_D
+select * from SRT_SR_CL_HIER_D
+delete from SRT_SR_CLASS_S_T
+select * from SRT_SR_CLASS_S_T
+delete from SRT_SR_CLASS_SYS
+select * from SRT_SR_CLASS_SYS
+delete from SRT_SR_CLASS_V_T
+select * from SRT_SR_CLASS_V_T
+delete from SRT_SR_CLASS_VAL
+select * from SRT_SR_CLASS_VAL
+delete from SRT_SR_CLS_HIER
+select * from SRT_SR_CLS_HIER
+delete from SRT_SR_CLS_VALUE
+select * from SRT_SR_CLS_VALUE
+delete from SRT_SR_CON
+select * from SRT_SR_CON
+delete from SRT_SR_CON_T
+select * from SRT_SR_CON_T
+delete from SRT_SR_FORWARD
+select * from SRT_SR_FORWARD
+delete from SRT_SR_FORWARD_Q
+select * from SRT_SR_FORWARD_Q
+delete from SRT_SR_IBC
+select * from SRT_SR_IBC
+delete from SRT_SR_IBC_T
+select * from SRT_SR_IBC_T
+delete from SRT_SR_NTF_DATA
+select * from SRT_SR_NTF_DATA
+delete from SRT_SR_NTF_H
+select * from SRT_SR_NTF_H
+delete from SRT_SR_NWSD
+select * from SRT_SR_NWSD
+delete from SRT_SR_NWSD_T
+select * from SRT_SR_NWSD_T
+delete from SRT_SR_PUB_H
+select * from SRT_SR_PUB_H
+delete from SRT_SR_RELATION
+select * from SRT_SR_RELATION
+delete from SRT_SR_SEP
+select * from SRT_SR_SEP
+delete from SRT_SR_SEP_T
+select * from SRT_SR_SEP_T
+delete from SRT_SR_SUB_H
+select * from SRT_SR_SUB_H
+delete from SRT_SR_SYSTEM
+select * from SRT_SR_SYSTEM
+delete from SRT_SR_UDDI_ROW
+select * from SRT_SR_UDDI_ROW
+delete from SRT_SR_URL
+select * from SRT_SR_URL
+delete from SRT_SR_VW_ASSIGN
+select * from SRT_SR_VW_ASSIGN
+delete from SRT_SR_VW_DETAIL
+select * from SRT_SR_VW_DETAIL
+delete from SRT_SR_VW_HEADER
+select * from SRT_SR_VW_HEADER
+delete from SRT_SR_WSD
+select * from SRT_SR_WSD
+delete from SRT_SR_WSD_T
+select * from SRT_SR_WSD_T
+delete from SRT_ST_ACT_A
+select * from SRT_ST_ACT_A
+delete from SRT_ST_ACT_C
+select * from SRT_ST_ACT_C
+delete from SRT_ST_ACT_C_C
+select * from SRT_ST_ACT_C_C
+delete from SRT_ST_ACT_C_CC
+select * from SRT_ST_ACT_C_CC
+delete from SRT_ST_ACT_CFACC
+select * from SRT_ST_ACT_CFACC
+delete from SRT_ST_ACT_CFACT
+select * from SRT_ST_ACT_CFACT
+delete from SRT_ST_ACT_EPRO
+select * from SRT_ST_ACT_EPRO
+delete from SRT_ST_ACT_EPROC
+select * from SRT_ST_ACT_EPROC
+delete from SRT_ST_ACT_P
+select * from SRT_ST_ACT_P
+delete from SRT_ST_ACT_P_C
+select * from SRT_ST_ACT_P_C
+delete from SRT_ST_ACT_P_CC
+select * from SRT_ST_ACT_P_CC
+delete from SRT_ST_ACT_P_I_C
+select * from SRT_ST_ACT_P_I_C
+delete from SRT_ST_ACT_P_IBC
+select * from SRT_ST_ACT_P_IBC
+delete from SRT_ST_ACT_PUB
+select * from SRT_ST_ACT_PUB
+delete from SRT_ST_ACT_PUB_C
+select * from SRT_ST_ACT_PUB_C
+delete from SRT_ST_REQ_A
+select * from SRT_ST_REQ_A
+delete from SRT_ST_REQ_C
+select * from SRT_ST_REQ_C
+delete from SRT_ST_REQ_P
+select * from SRT_ST_REQ_P
+delete from SRT_SYS_NR
+select * from SRT_SYS_NR
+delete from SRT_SYS_SETTINGS
+select * from SRT_SYS_SETTINGS
+delete from SRT_SYST_APPL
+select * from SRT_SYST_APPL
+delete from SRT_SYST_APPL_HT
+select * from SRT_SYST_APPL_HT
+delete from SRT_SYST_CL_DATA
+select * from SRT_SYST_CL_DATA
+delete from SRT_SYST_CL_DIR
+select * from SRT_SYST_CL_DIR
+delete from SRT_SYSTEM_DIR
+select * from SRT_SYSTEM_DIR
+delete from SRT_TEST_CONCATE
+select * from SRT_TEST_CONCATE
+delete from SRT_TMP_CG_DATA
+select * from SRT_TMP_CG_DATA
+delete from SRT_TMP_CG_DATAL
+select * from SRT_TMP_CG_DATAL
+delete from SRT_TRACE_USERS
+select * from SRT_TRACE_USERS
+delete from SRT_TRANSP
+select * from SRT_TRANSP
+delete from SRT_TRANSP_A
+select * from SRT_TRANSP_A
+delete from SRT_TRANSP_KEYS
+select * from SRT_TRANSP_KEYS
+delete from SRT_TRC_ASSIGN
+select * from SRT_TRC_ASSIGN
+delete from SRT_TRC_COUNTER
+select * from SRT_TRC_COUNTER
+delete from SRT_TRC_FILES
+select * from SRT_TRC_FILES
+delete from SRT_U_ASSIGN_DAT
+select * from SRT_U_ASSIGN_DAT
+delete from SRT_U_ASSIGN_DIR
+select * from SRT_U_ASSIGN_DIR
+delete from SRT_UASSIGN_DIR
+select * from SRT_UASSIGN_DIR
+delete from SRT_USER_DATA
+select * from SRT_USER_DATA
+delete from SRT_USER_DIR
+select * from SRT_USER_DIR
+delete from SRT_USER_DIR_T
+select * from SRT_USER_DIR_T
+delete from SRT_WHITE_LIST
+select * from SRT_WHITE_LIST
+delete from SRT_WSDL_CACHE_P
+select * from SRT_WSDL_CACHE_P
+delete from SRT_WSDL_DIR
+select * from SRT_WSDL_DIR
+delete from SRT_WSDL_DIR_T
+select * from SRT_WSDL_DIR_T
+delete from SRT_WSDL_DS_ASGN
+select * from SRT_WSDL_DS_ASGN
+delete from SRT_WSDL_ENTITY
+select * from SRT_WSDL_ENTITY
+delete from SRT_WSIL_CACHE_C
+select * from SRT_WSIL_CACHE_C
+delete from SRT_WSIL_CACHE_P
+select * from SRT_WSIL_CACHE_P
+delete from SRT_WSIL_TMP
+select * from SRT_WSIL_TMP
+delete from SRT_WSP_WSDL_FLA
+select * from SRT_WSP_WSDL_FLA
+delete from SRTFT_ASSIGN
+select * from SRTFT_ASSIGN
+delete from SRTFT_ASSIGN_IF
+select * from SRTFT_ASSIGN_IF
+delete from SRTFT_ASSIGN_SEC
+select * from SRTFT_ASSIGN_SEC
+delete from SRTFT_NM_CFG_MAP
+select * from SRTFT_NM_CFG_MAP
+delete from SRTFT_QDATA_LOG
+select * from SRTFT_QDATA_LOG
+delete from SRTFT_QUEUE
+select * from SRTFT_QUEUE
+delete from SRTFT_QUEUE_DATA
+select * from SRTFT_QUEUE_DATA
+delete from SRTFT_QUEUE_LG_T
+select * from SRTFT_QUEUE_LG_T
+delete from SRTFT_QUEUE_LOG
+select * from SRTFT_QUEUE_LOG
+delete from TBL_PUB_KEYS
+select * from TBL_PUB_KEYS
+delete from TBL_PUB_RULE
+select * from TBL_PUB_RULE
+delete from TBL_PUB_RULE_CLS
+select * from TBL_PUB_RULE_CLS
+delete from TBL_PUB_RULE_REG
+select * from TBL_PUB_RULE_REG
+delete from TBL_PUB_RULE_SET
+select * from TBL_PUB_RULE_SET
+delete from UDDICL_KEYS
+select * from UDDICL_KEYS
+delete from UDDICL_REG
+select * from UDDICL_REG
+delete from UDDICL_REGT
+select * from UDDICL_REGT
+delete from UDDICL_SEARCH
+select * from UDDICL_SEARCH

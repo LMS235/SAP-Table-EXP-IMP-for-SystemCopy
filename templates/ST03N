@@ -1,0 +1,24 @@
+delete from OSMON
+select * from OSMON
+delete from SAPWLSFIDX
+select * from SAPWLSFIDX
+delete from SAPWLSFIHD
+select * from SAPWLSFIHD
+delete from SWNC_SETTINGS
+select * from SWNC_SETTINGS
+delete from SWNCCOLLCOMPRESS
+select * from SWNCCOLLCOMPRESS
+delete from SWNCCOLLPACKSIZE
+select * from SWNCCOLLPACKSIZE
+delete from SWNCCOLLPARAM
+select * from SWNCCOLLPARAM
+delete from SWNCCOLLPATXT
+select * from SWNCCOLLPATXT
+delete from SWNCCOLLPERF
+select * from SWNCCOLLPERF
+delete from SWNCCOLLPERFTOT
+select * from SWNCCOLLPERFTOT
+delete from SWNCMONI
+select * from SWNCMONI
+delete from SWNCMONIINDEX
+select * from SWNCMONIINDEX
