@@ -99,7 +99,7 @@ export importedtables=$EXPIMPLOC/imported_tables.conf
 [ -e $importedtables ] && rm $importedtables
 
 # info file
-echo "# Template name | Return Code of Export" >> $importedtables
+echo "# Template name | Return Code of Import" >> $importedtables
 echo "# =====================================" >> $importedtables
 echo "# Imported from:" >> $importedtables
 echo "# "$EXPIMPLOC >> $importedtables
