@@ -1,5 +1,5 @@
 #!/bin/bash
-# SAP(R) Table EXP/IMP for SystemCopy (c) Florian Lamml 2024
+# SAP(R) Table EXP/IMP for SystemCopy (c) Florian Lamml 2025
 # www.florian-lamml.de
 # Version 1.0 - Initial Release
 # Version 1.1 - Client Config
@@ -10,6 +10,7 @@
 # Version 1.6 - Corrections Cloud ALM and GTS Template
 # Version 1.7 - More Templates
 # Version 1.7.1 - More Templates Correction
+# Version 1.7.2 - BD97 Template
 
 # set config file and delete old one
 export exportedtables=$EXPIMPLOC/exported_tables.conf

@@ -1,0 +1,4 @@
+delete from TBLSYSDEST
+select * from TBLSYSDEST
+delete from TBSPECDEST
+select * from TBSPECDEST
