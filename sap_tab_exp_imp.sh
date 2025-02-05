@@ -28,7 +28,7 @@ export EXPCLIENT=ALL
 # you have to run it as "sidadm"
 # it use the normal R3trans for export
 # and import with template files
-####################(c) Florian Lamml 2024#
+####################(c) Florian Lamml 2025#
 
 # Prerequisites ###########################
 # need 'dialog' to run
@@ -61,9 +61,9 @@ export global_pwd=$(pwd)
 export global_height=45
 export global_width=80
 export global_list=35
-export global_title="SAP Table EXP/IMP for SystemCopy (c) Florian Lamml 2024"
-export global_backtitle="SAP Table EXP/IMP for SystemCopy (c) Florian Lamml 2024"
-export global_copy="(c) Florian Lamml 2024"
+export global_title="SAP Table EXP/IMP for SystemCopy (c) Florian Lamml 2025"
+export global_backtitle="SAP Table EXP/IMP for SystemCopy (c) Florian Lamml 2025"
+export global_copy="(c) Florian Lamml 2025"
 
 # check export location (and create directory)
 if [ -z "$EXPIMPLOC" ]; 
