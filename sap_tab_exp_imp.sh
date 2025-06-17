@@ -11,15 +11,21 @@
 # Version 1.7 - More Templates
 # Version 1.7.1 - More Templates Correction
 # Version 1.7.2 - BD97 Template
+# Version 1.8 - R3load Parallel Parameter
 
 ##### CONFIG EXPORT / IMPORT LOCATION #####
 export EXPIMPLOC=
 ###########################################
 
-############## CONFIG CLIENT ##############
+##### CONFIG CLIENT #######################
 # DEFAULT (000), ALL or CLIENT Number
 # Default Value = ALL
 export EXPCLIENT=ALL
+###########################################
+
+##### CONFIG PARALLEL (SAP 1127194) #######
+# DEFAULT 0, Max 1-2x CPU Count
+export PARALLEL=0
 ###########################################
 
 ##### info ################################
@@ -96,6 +102,12 @@ if [ -z "$SAPSYSTEMNAME" ];
    exit 98
 fi
 
+# PARALLEL check empty variable
+if [ -z "${PARALLEL}" ]; 
+ then
+	PARALLEL=0
+fi
+
 # check AIX and set PATH and LIBPATH to use linux dialog (build from dialog-1.2-20150225 with gcc-4.8.3-1.aix7.1 on AIX 7.1) on AIX
 export OS=$(uname)
 if [ $OS == AIX ]
@@ -120,7 +132,7 @@ chmod u+x $global_pwd/script/sap_export_tables.sh
 chmod u+x $global_pwd/script/sap_import_tables.sh
 
 # EXPORT or IMPORT dialog
-DIALOG=(dialog --title "$global_title" --backtitle "$global_backtitle"  --radiolist  "   _______   ___ \n  / __/ _ | / _ \ \n _\ \/ __ |/ ___/\n/___/_/ |_/_/    \n _________   ___  __   ____\n/_  __/ _ | / _ )/ /  / __/\n / / / __ |/ _  / /__/ _/  \n/_/ /_/ |_/____/____/___/  \n   _____  _____  ______  ______ \n  / __/ |/_/ _ \/  _/  |/  / _ \ \n / _/_>  </ ___// // /|_/ / ___/\n/___/_/|_/_/  /___/_/  /_/_/    \n\nEXPORT or IMPORT Tables?\n\nINFO: $EXPIMPLOCINFO\nINFO: $EXPIMPLOC \n\nCLIENT: $EXPCLIENT\nOS: $OS | USER: $CURUSER | SAPSYSTEM: $SAPSYSTEMNAME\n\n                                $global_copy" $global_height $global_width 2)
+DIALOG=(dialog --title "$global_title" --backtitle "$global_backtitle"  --radiolist  "   _______   ___ \n  / __/ _ | / _ \ \n _\ \/ __ |/ ___/\n/___/_/ |_/_/    \n _________   ___  __   ____\n/_  __/ _ | / _ )/ /  / __/\n / / / __ |/ _  / /__/ _/  \n/_/ /_/ |_/____/____/___/  \n   _____  _____  ______  ______ \n  / __/ |/_/ _ \/  _/  |/  / _ \ \n / _/_>  </ ___// // /|_/ / ___/\n/___/_/|_/_/  /___/_/  /_/_/    \n\nEXPORT or IMPORT Tables?\n\nINFO: $EXPIMPLOCINFO\nINFO: $EXPIMPLOC \n\nCLIENT: $EXPCLIENT | PARALLEL: $PARALLEL\nOS: $OS | USER: $CURUSER | SAPSYSTEM: $SAPSYSTEMNAME\n\n                                $global_copy" $global_height $global_width 2)
 OPTIONS=("EXPORT" "Export SAP Tables" on "IMPORT" "Import SAP Tables" off)
 EXPORIMP=$("${DIALOG[@]}" "${OPTIONS[@]}" 2>&1 >/dev/tty)
 # check ESC hit

@@ -11,6 +11,7 @@
 # Version 1.7 - More Templates
 # Version 1.7.1 - More Templates Correction
 # Version 1.7.2 - BD97 Template
+# Version 1.8 - R3load Parallel Parameter
 
 # set config file and delete old one
 export selectedtablesforexport=$EXPIMPLOC/selected_tables_for_export.conf
@@ -107,6 +108,9 @@ while read SELTABLES
 do
  echo "export" >> $EXPIMPLOC/$SELTABLES.tpl
  echo "client = "$EXPCLIENT"" >> $EXPIMPLOC/$SELTABLES.tpl
+ if [ "${PARALLEL}" -ne 0 ]; then
+  echo "parallel = "$PARALLEL >> $EXPIMPLOC/$SELTABLES.tpl
+ fi
  echo "file = '"$EXPIMPLOC"/"$SELTABLES".dat'" >> $EXPIMPLOC/$SELTABLES.tpl
  cat $global_pwd/templates/$SELTABLES >> $EXPIMPLOC/$SELTABLES.tpl
  echo "=== Export START" $SELTABLES "==="

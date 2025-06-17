@@ -14,6 +14,7 @@ www.florian-lamml.de
  - Version 1.7 - More Templates
  - Version 1.7.1 - More Templates Correction
  - Version 1.7.2 - BD97 Template
+ - Version 1.8 - R3load Parallel Parameter
 
 `copy to your Unix / Linux Server and run sap_tab_exp_imp.sh`
 
