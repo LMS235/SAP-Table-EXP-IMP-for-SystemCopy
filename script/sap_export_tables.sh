@@ -14,6 +14,7 @@
 # Version 1.8 - R3load Parallel Parameter
 # Version 1.8.1 - More Templates
 # Version 1.8.2 - More Templates
+# Version 1.8.3 - $SAPSYSTEMNAME in default expimp location
 
 # set config file and delete old one
 export selectedtablesforexport=$EXPIMPLOC/selected_tables_for_export.conf

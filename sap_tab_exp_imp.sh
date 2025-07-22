@@ -14,6 +14,7 @@
 # Version 1.8 - R3load Parallel Parameter
 # Version 1.8.1 - More Templates
 # Version 1.8.2 - More Templates
+# Version 1.8.3 - $SAPSYSTEMNAME in default expimp location
 
 ##### CONFIG EXPORT / IMPORT LOCATION #####
 export EXPIMPLOC=
@@ -77,11 +78,11 @@ export global_copy="(c) Florian Lamml 2025"
 if [ -z "$EXPIMPLOC" ]; 
  then 
  export EXPIMPLOCINFO="EXPIMPLOC is not set, use default";
- export EXPIMPLOC=$global_pwd/expimp
+ export EXPIMPLOC=$global_pwd/expimp/$SAPSYSTEMNAME
 else 
  export EXPIMPLOCINFO="EXPIMPLOC is set to"; 
 fi
-[ ! -d "$EXPIMPLOC" ] && mkdir $EXPIMPLOC
+[ ! -d "$EXPIMPLOC" ] && mkdir -p $EXPIMPLOC
 
 # set logfile
 export EXPIMPLOGFILE=$EXPIMPLOC/EXP_IMP_LOG_$(date "+%d_%m_%Y").txt
