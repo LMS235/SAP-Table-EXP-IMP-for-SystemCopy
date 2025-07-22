@@ -13,6 +13,7 @@
 # Version 1.7.2 - BD97 Template
 # Version 1.8 - R3load Parallel Parameter
 # Version 1.8.1 - More Templates
+# Version 1.8.2 - More Templates
 
 # set config file and delete old one
 export exportedtables=$EXPIMPLOC/exported_tables.conf

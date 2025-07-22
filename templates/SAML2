@@ -1,0 +1,52 @@
+delete from SAML2_AFFILIAT
+select * from SAML2_AFFILIAT
+delete from SAML2_AFL_ENT
+select * from SAML2_AFL_ENT
+delete from SAML2_AUTH_CXT
+select * from SAML2_AUTH_CXT
+delete from SAML2_CDC_URLS
+select * from SAML2_CDC_URLS
+delete from SAML2_CUST_CXT
+select * from SAML2_CUST_CXT
+delete from SAML2_ENT_AUTH
+select * from SAML2_ENT_AUTH
+delete from SAML2_ENT_NFMT
+select * from SAML2_ENT_NFMT
+delete from SAML2_ENT_PARM
+select * from SAML2_ENT_PARM
+delete from SAML2_ENT_PROT
+select * from SAML2_ENT_PROT
+delete from SAML2_ENT_RELST
+select * from SAML2_ENT_RELST
+delete from SAML2_ENT_SRVC
+select * from SAML2_ENT_SRVC
+delete from SAML2_ENTITY
+select * from SAML2_ENTITY
+delete from SAML2_ENTITY_E
+select * from SAML2_ENTITY_E
+delete from SAML2_ENTITY_L
+select * from SAML2_ENTITY_L
+delete from SAML2_NAME_FMT
+select * from SAML2_NAME_FMT
+delete from SAML2_OPM_PARM
+select * from SAML2_OPM_PARM
+delete from SAML2_PIDFED
+select * from SAML2_PIDFED
+delete from SAML2_POL_AUTH
+select * from SAML2_POL_AUTH
+delete from SAML2_POL_PROPS
+select * from SAML2_POL_PROPS
+delete from SAML2_POLICY
+select * from SAML2_POLICY
+delete from SAML2_POLICYT
+select * from SAML2_POLICYT
+delete from SAML2_STATUS
+select * from SAML2_STATUS
+delete from SAML2_STATUST
+select * from SAML2_STATUST
+delete from SAML2_TIDCON
+select * from SAML2_TIDCON
+delete from SAML2_TIDFED
+select * from SAML2_TIDFED
+delete from SAML2_TRUST
+select * from SAML2_TRUST

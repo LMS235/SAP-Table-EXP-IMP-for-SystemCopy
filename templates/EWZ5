@@ -1,0 +1,2 @@
+delete from EWUUSERTYP
+select * from EWUUSERTYP

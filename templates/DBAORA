@@ -1,0 +1,40 @@
+delete from DBABARL
+select * from DBABARL
+delete from DBABD
+select * from DBABD
+delete from DBABL
+select * from DBABL
+delete from DBADFL
+select * from DBADFL
+delete from DBAERR
+select * from DBAERR
+delete from DBAEXTL
+select * from DBAEXTL
+delete from DBAFID
+select * from DBAFID
+delete from DBAGRP
+select * from DBAGRP
+delete from DBAML
+select * from DBAML
+delete from DBAOBJL
+select * from DBAOBJL
+delete from DBAOPTL
+select * from DBAOPTL
+delete from DBAPHAL
+select * from DBAPHAL
+delete from DBARCL
+select * from DBARCL
+delete from DBAREOL
+select * from DBAREOL
+delete from DBASPAL
+select * from DBASPAL
+delete from DBATL
+select * from DBATL
+delete from DBATRIAL
+select * from DBATRIAL
+delete from DBCHECKORA
+select * from DBCHECKORA
+delete from DBMSGORA
+select * from DBMSGORA
+delete from DBSTATC
+select * from DBSTATC

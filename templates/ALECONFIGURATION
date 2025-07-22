@@ -1,0 +1,66 @@
+delete from BDRGIN
+select * from BDRGIN
+delete from BGRFC_MAIN_I_DST
+select * from BGRFC_MAIN_I_DST
+delete from EDIDESTFORPRIO
+select * from EDIDESTFORPRIO
+delete from EDIPHONE
+select * from EDIPHONE
+delete from EDIPO
+select * from EDIPO
+delete from EDIPO2
+select * from EDIPO2
+delete from EDIPOA
+select * from EDIPOA
+delete from EDIPOD
+select * from EDIPOD
+delete from EDIPOF
+select * from EDIPOF
+delete from EDIPOI
+select * from EDIPOI
+delete from EDIPORT
+select * from EDIPORT
+delete from EDIPOX
+select * from EDIPOX
+delete from EDIPOXH
+select * from EDIPOXH
+delete from EDIPOXU
+select * from EDIPOXU
+delete from EDIPRIOID
+select * from EDIPRIOID
+delete from EDIQIDEST
+select * from EDIQIDEST
+delete from EDP12
+select * from EDP12
+delete from EDP13
+select * from EDP13
+delete from EDP13OPTIONS
+select * from EDP13OPTIONS
+delete from EDP21
+select * from EDP21
+delete from EDP21OPTIONS
+select * from EDP21OPTIONS
+delete from EDPO_QUEUE_INB
+select * from EDPO_QUEUE_INB
+delete from EDPP1
+select * from EDPP1
+delete from TBD00
+select * from TBD00
+delete from TBD00T
+select * from TBD00T
+delete from TBD05
+select * from TBD05
+delete from TBD06
+select * from TBD06
+delete from TBD10
+select * from TBD10
+delete from TBD16
+select * from TBD16
+delete from TBD17
+select * from TBD17
+delete from TBDBR
+select * from TBDBR
+delete from TBDBRF
+select * from TBDBRF
+delete from TBLSYSDEST
+select * from TBLSYSDEST
