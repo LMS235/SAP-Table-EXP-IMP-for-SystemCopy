@@ -4,3 +4,43 @@ delete from TOAOM
 select * from TOAOM
 delete from TOASR
 select * from TOASR
+delete from TOADL
+select * from TOADL
+delete from TOAHR
+select * from TOAHR
+delete from TOA01
+select * from TOA01
+delete from TOA02
+select * from TOA02
+delete from TOA03
+select * from TOA03
+delete from TOA04
+select * from TOA04
+delete from TOACU
+select * from TOACU
+delete from TOACO
+select * from TOACO
+delete from CREP
+select * from CREP
+delete from CREPDESCR
+select * from CREPDESCR
+delete from CREPDOCSP
+select * from CREPDOCSP
+delete from CREP_CMIS
+select * from CREP_CMIS
+delete from CREP_FILE
+select * from CREP_FILE
+delete from CREP_FTP
+select * from CREP_FTP
+delete from CREP_HTTP
+select * from CREP_HTTP
+delete from CREP_LREP
+select * from CREP_LREP
+delete from CREP_R3DB
+select * from CREP_R3DB
+delete from CREP_RFC
+select * from CREP_RFC
+delete from CREP_RPC
+select * from CREP_RPC
+delete from CREP_TREE
+select * from CREP_TREE
