@@ -15,6 +15,7 @@
 # Version 1.8.1 - More Templates
 # Version 1.8.2 - More Templates
 # Version 1.8.3 - $SAPSYSTEMNAME in default expimp location
+# Version 1.8.4 - Correction of OAC0 Template
 
 # set config file and delete old one
 export exportedtables=$EXPIMPLOC/exported_tables.conf
