@@ -44,3 +44,13 @@ delete from CREP_RPC
 select * from CREP_RPC
 delete from CREP_TREE
 select * from CREP_TREE
+delete from SDOKSTCA
+select * from SDOKSTCA
+delete from SDOKSTCA_V
+select * from SDOKSTCA_V
+delete from SDOKSTCAE
+select * from SDOKSTCAE
+delete from SDOKSTCAT
+select * from SDOKSTCAT
+delete from SDOKSTCDSP
+select * from SDOKSTCDSP
