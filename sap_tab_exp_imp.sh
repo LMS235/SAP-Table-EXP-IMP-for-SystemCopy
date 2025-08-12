@@ -16,6 +16,7 @@
 # Version 1.8.2 - More Templates
 # Version 1.8.3 - $SAPSYSTEMNAME in default expimp location
 # Version 1.8.4 - Correction of OAC0 Template
+# Version 1.8.5 - OMIQ Template
 
 ##### CONFIG EXPORT / IMPORT LOCATION #####
 export EXPIMPLOC=

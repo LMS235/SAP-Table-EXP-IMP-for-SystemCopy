@@ -1,0 +1,2 @@
+delete from T462A
+select * from T462A
