@@ -17,6 +17,7 @@
 # Version 1.8.3 - $SAPSYSTEMNAME in default expimp location
 # Version 1.8.4 - Correction of OAC0 Template
 # Version 1.8.5 - OMIQ Template, Correction OAC0 Template
+# Version 1.8.6 - Correct OAC0 Template
 
 # set config file and delete old one
 export selectedtablesforexport=$EXPIMPLOC/selected_tables_for_export.conf
