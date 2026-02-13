@@ -1,6 +1,6 @@
 # SAP-Table-EXP-IMP-for-SystemCopy
 
-SAP&trade; Table EXP/IMP for SystemCopy &copy; Florian Lamml 2025
+SAP&trade; Table EXP/IMP for SystemCopy &copy; Florian Lamml 2026
 
 A simple script for exporting and importing SAP tables during a system copy.
 

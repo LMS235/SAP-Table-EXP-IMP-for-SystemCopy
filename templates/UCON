@@ -12,6 +12,22 @@ delete from HTTP_CHW_LOG_WHI
 select * from HTTP_CHW_LOG_WHI
 delete from HTTP_CHW_SETUP
 select * from HTTP_CHW_SETUP
+delete from HTTP_CORS_LOG
+select * from HTTP_CORS_LOG
+delete from HTTP_CORS_LOG_MW
+select * from HTTP_CORS_LOG_MW
+delete from HTTP_CORS_LOG_WH
+select * from HTTP_CORS_LOG_WH
+delete from HTTP_CORS_MLOG
+select * from HTTP_CORS_MLOG
+delete from HTTP_CORS_MSUPP
+select * from HTTP_CORS_MSUPP
+delete from HTTP_CORS_MWHITE
+select * from HTTP_CORS_MWHITE
+delete from HTTP_CORS_SUPP
+select * from HTTP_CORS_SUPP
+delete from HTTP_CORS_WHITE
+select * from HTTP_CORS_WHITE
 delete from HTTP_ENTRY_CONV
 select * from HTTP_ENTRY_CONV
 delete from HTTP_LOG_LIST
@@ -28,6 +44,8 @@ delete from HTTP_SUPP_LIST
 select * from HTTP_SUPP_LIST
 delete from HTTP_WHITE_LIST
 select * from HTTP_WHITE_LIST
+delete from HTTP_WHITELIST
+select * from HTTP_WHITELIST
 delete from RFC_BL_SERVER
 select * from RFC_BL_SERVER
 delete from RFC_BL_SERVERC

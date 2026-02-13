@@ -1,5 +1,5 @@
 #!/bin/bash
-# SAP(R) Table EXP/IMP for SystemCopy (c) Florian Lamml 2025
+# SAP(R) Table EXP/IMP for SystemCopy (c) Florian Lamml 2026
 # www.florian-lamml.de
 # Version 1.0 - Initial Release
 # Version 1.1 - Client Config
@@ -18,6 +18,7 @@
 # Version 1.8.4 - Correction of OAC0 Template
 # Version 1.8.5 - OMIQ Template, Correction OAC0 Template
 # Version 1.8.6 - Correct OAC0 Template
+# Version 1.8.7 - Correct UCON Template, ADD ALECUSTOMIZINGNOTADIR (ALECUSTOMIZING without TADIR)
 
 ##### CONFIG EXPORT / IMPORT LOCATION #####
 export EXPIMPLOC=
@@ -40,7 +41,7 @@ export PARALLEL=0
 # you have to run it as "sidadm"
 # it use the normal R3trans for export
 # and import with template files
-####################(c) Florian Lamml 2025#
+####################(c) Florian Lamml 2026#
 
 # Prerequisites ###########################
 # need 'dialog' to run
@@ -73,9 +74,9 @@ export global_pwd=$(pwd)
 export global_height=45
 export global_width=80
 export global_list=35
-export global_title="SAP Table EXP/IMP for SystemCopy (c) Florian Lamml 2025"
-export global_backtitle="SAP Table EXP/IMP for SystemCopy (c) Florian Lamml 2025"
-export global_copy="(c) Florian Lamml 2025"
+export global_title="SAP Table EXP/IMP for SystemCopy (c) Florian Lamml 2026"
+export global_backtitle="SAP Table EXP/IMP for SystemCopy (c) Florian Lamml 2026"
+export global_copy="(c) Florian Lamml 2026"
 
 # check export location (and create directory)
 if [ -z "$EXPIMPLOC" ]; 

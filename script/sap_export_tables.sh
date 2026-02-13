@@ -1,5 +1,5 @@
 #!/bin/bash
-# SAP(R) Table EXP/IMP for SystemCopy (c) Florian Lamml 2025
+# SAP(R) Table EXP/IMP for SystemCopy (c) Florian Lamml 2026
 # www.florian-lamml.de
 # Version 1.0 - Initial Release
 # Version 1.1 - Client Config
@@ -18,6 +18,7 @@
 # Version 1.8.4 - Correction of OAC0 Template
 # Version 1.8.5 - OMIQ Template, Correction OAC0 Template
 # Version 1.8.6 - Correct OAC0 Template
+# Version 1.8.7 - Correct UCON Template, ADD ALECUSTOMIZINGNOTADIR (ALECUSTOMIZING without TADIR)
 
 # set config file and delete old one
 export selectedtablesforexport=$EXPIMPLOC/selected_tables_for_export.conf

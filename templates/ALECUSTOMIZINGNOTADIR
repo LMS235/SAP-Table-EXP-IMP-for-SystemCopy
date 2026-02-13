@@ -1,0 +1,68 @@
+delete from EDBAS
+select * from EDBAS
+delete from EDBAST
+select * from EDBAST
+delete from EDIFCT
+select * from EDIFCT
+delete from EDIMSG
+select * from EDIMSG
+delete from EDIMSGT
+select * from EDIMSGT
+delete from EDISDEF
+select * from EDISDEF
+delete from EDISEGMENT
+select * from EDISEGMENT
+delete from EDMSG
+select * from EDMSG
+delete from EDSAPPL
+select * from EDSAPPL
+delete from IDOCSYN
+select * from IDOCSYN
+delete from TBD11
+select * from TBD11
+delete from TBD12
+select * from TBD12
+delete from TBD13
+select * from TBD13
+delete from TBD14
+select * from TBD14
+delete from TBD20
+select * from TBD20
+delete from TBD24
+select * from TBD24
+delete from TBD30
+select * from TBD30
+delete from TBD51
+select * from TBD51
+delete from TBD52
+select * from TBD52
+delete from TBD55
+select * from TBD55
+delete from TBD56
+select * from TBD56
+delete from TBD62
+select * from TBD62
+delete from TBDA2
+select * from TBDA2
+delete from TBDBA
+select * from TBDBA
+delete from TBDBE
+select * from TBDBE
+delete from TBDBH
+select * from TBDBH
+delete from TBDBS
+select * from TBDBS
+delete from TBDFA
+select * from TBDFA
+delete from TBDME
+select * from TBDME
+delete from TBDMS
+select * from TBDMS
+delete from TBDSS
+select * from TBDSS
+delete from TBLSYSDEST
+select * from TBLSYSDEST
+delete from TBSPECDEST
+select * from TBSPECDEST
+delete from TEDE2
+select * from TEDE2
