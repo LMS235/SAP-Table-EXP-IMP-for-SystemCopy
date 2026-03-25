@@ -1,0 +1,96 @@
+delete from BTC_CRITERIA
+select * from BTC_CRITERIA
+delete from BTC_CRITNODES
+select * from BTC_CRITNODES
+delete from BTC_CRITPROFILES
+select * from BTC_CRITPROFILES
+delete from BTC_CRITTYPES
+select * from BTC_CRITTYPES
+delete from BTC_TYPEFIELDS
+select * from BTC_TYPEFIELDS
+delete from BTCEVTJOB
+select * from BTCEVTJOB
+delete from BTCOPTIONS
+select * from BTCOPTIONS
+delete from BTCTENCOPYMAP
+select * from BTCTENCOPYMAP
+delete from BTCTENCOPYSHAD
+select * from BTCTENCOPYSHAD
+delete from BTCUEV
+select * from BTCUEV
+delete from SPOTENCOPYMAP
+select * from SPOTENCOPYMAP
+delete from SPOTENCOPYSHAD
+select * from SPOTENCOPYSHAD
+delete from STJR_CONFIG
+select * from STJR_CONFIG
+delete from STJR_HISTORY
+select * from STJR_HISTORY
+delete from STJR_JOBD_CNTXT
+select * from STJR_JOBD_CNTXT
+delete from STJR_JOBD_CONF
+select * from STJR_JOBD_CONF
+delete from STJR_JOBD_CUST
+select * from STJR_JOBD_CUST
+delete from STJR_JOBD_JCLASS
+select * from STJR_JOBD_JCLASS
+delete from STJR_JOBD_LOCL
+select * from STJR_JOBD_LOCL
+delete from STJR_JOBD_ROOT
+select * from STJR_JOBD_ROOT
+delete from STJR_JOBD_SCOPE
+select * from STJR_JOBD_SCOPE
+delete from STJR_JOBD_STATUS
+select * from STJR_JOBD_STATUS
+delete from STJR_JOBD_TARGET
+select * from STJR_JOBD_TARGET
+delete from STJR_JOBD_TREP
+select * from STJR_JOBD_TREP
+delete from STJR_JOBD_USER
+select * from STJR_JOBD_USER
+delete from STJR_JOBD_VARIS
+select * from STJR_JOBD_VARIS
+delete from TBTC_CHAIN
+select * from TBTC_CHAIN
+delete from TBTC_RUN_STAT
+select * from TBTC_RUN_STAT
+delete from TBTC_RUN_WHITE
+select * from TBTC_RUN_WHITE
+delete from TBTC_TASK
+select * from TBTC_TASK
+delete from TBTC_TASK_DET
+select * from TBTC_TASK_DET
+delete from TBTC_TASK_PARAMS
+select * from TBTC_TASK_PARAMS
+delete from TBTCCNTXT
+select * from TBTCCNTXT
+delete from TBTCJOBLOG
+select * from TBTCJOBLOG
+delete from TBTCJOBLOG0
+select * from TBTCJOBLOG0
+delete from TBTCJOBLOG1
+select * from TBTCJOBLOG1
+delete from TBTCJOBLOG2
+select * from TBTCJOBLOG2
+delete from TBTCJOBLOG3
+select * from TBTCJOBLOG3
+delete from TBTCJOBLOG4
+select * from TBTCJOBLOG4
+delete from TBTCJOBLOG5
+select * from TBTCJOBLOG5
+delete from TBTCJOBLOG6
+select * from TBTCJOBLOG6
+delete from TBTCJOBLOG7
+select * from TBTCJOBLOG7
+delete from TBTCJOBLOG8
+select * from TBTCJOBLOG8
+delete from TBTCJOBLOG9
+select * from TBTCJOBLOG9
+delete from TBTCO
+select * from TBTCO
+delete from TBTCP
+select * from TBTCP
+delete from TBTCS
+select * from TBTCS
+delete from TPRI_PAR
+select * from TPRI_PAR

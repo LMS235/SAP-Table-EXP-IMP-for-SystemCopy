@@ -66,5 +66,5 @@ delete from TBTCP
 select * from TBTCP
 delete from TBTCS
 select * from TBTCS
-delete from TPRI_PAR 
-select * from TPRI_PAR 
+delete from TPRI_PAR
+select * from TPRI_PAR

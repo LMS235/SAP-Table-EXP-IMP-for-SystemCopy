@@ -1,3 +1,11 @@
+delete from FIL_GRP_INTRN
+select * from FIL_GRP_INTRN
+delete from FILECMCUST
+select * from FILECMCUST
+delete from FILEGROUP
+select * from FILEGROUP
+delete from FILEGROUPT
+select * from FILEGROUPT
 delete from FILENAME
 select * from FILENAME
 delete from FILENAMECI

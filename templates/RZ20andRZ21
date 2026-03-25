@@ -1,0 +1,98 @@
+delete from ALAVLPING
+select * from ALAVLPING
+delete from ALBTCMON
+select * from ALBTCMON
+delete from ALCACHECNF
+select * from ALCACHECNF
+delete from ALCLASTOOL
+select * from ALCLASTOOL
+delete from ALCONSEG
+select * from ALCONSEG
+delete from ALCUSTSET
+select * from ALCUSTSET
+delete from ALF1DEFLT
+select * from ALF1DEFLT
+delete from ALGLOBSYSLGFIL
+select * from ALGLOBSYSLGFIL
+delete from ALGPRCUSME
+select * from ALGPRCUSME
+delete from ALGRPCUSGE
+select * from ALGRPCUSGE
+delete from ALGRPCUSMC
+select * from ALGRPCUSMC
+delete from ALGRPCUSMG
+select * from ALGRPCUSMG
+delete from ALGRPCUSPF
+select * from ALGRPCUSPF
+delete from ALGRPMCFIL
+select * from ALGRPMCFIL
+delete from ALMDRLDSC
+select * from ALMDRLDSC
+delete from ALMDRULES
+select * from ALMDRULES
+delete from ALMONISETS
+select * from ALMONISETS
+delete from ALMONITORS
+select * from ALMONITORS
+delete from ALMRULES
+select * from ALMRULES
+delete from ALMSETS
+select * from ALMSETS
+delete from ALMSETSV2
+select * from ALMSETSV2
+delete from ALMTECLSET
+select * from ALMTECLSET
+delete from ALNAMEDUSERS
+select * from ALNAMEDUSERS
+delete from ALSYSGRPS
+select * from ALSYSGRPS
+delete from ALSYSTEMS
+select * from ALSYSTEMS
+delete from ALTLDESCR
+select * from ALTLDESCR
+delete from ALTOOLCHEK
+select * from ALTOOLCHEK
+delete from ALTOOLDP
+select * from ALTOOLDP
+delete from ALTOOLEXEC
+select * from ALTOOLEXEC
+delete from ALTRAMONI
+select * from ALTRAMONI
+delete from CCM_ZOS
+select * from CCM_ZOS
+delete from CSMCENTOOL
+select * from CSMCENTOOL
+delete from CSMNIPINGCFG
+select * from CSMNIPINGCFG
+delete from CSMNSDIC
+select * from CSMNSDIC
+delete from CSMSEGM
+select * from CSMSEGM
+delete from CSMSYS
+select * from CSMSYS
+delete from CSMSYSAS
+select * from CSMSYSAS
+delete from CSMTOOLASG
+select * from CSMTOOLASG
+delete from GRMG_COMPONENT_T
+select * from GRMG_COMPONENT_T
+delete from GRMG_COMPONENTS
+select * from GRMG_COMPONENTS
+delete from GRMG_CONTROL
+select * from GRMG_CONTROL
+delete from GRMG_PROPERTIES
+select * from GRMG_PROPERTIES
+delete from GRMG_SCENARIO_T
+select * from GRMG_SCENARIO_T
+delete from GRMG_SCENARIOS
+select * from GRMG_SCENARIOS
+delete from LOGIC_DEST
+select * from LOGIC_DEST
+delete from SAPWLCOLPA
+select * from SAPWLCOLPA
+delete from SAPWLSERV
+select * from SAPWLSERV
+delete from SWNCCOLLCOMPRESS
+select * from SWNCCOLLCOMPRESS
+delete from SWNCCOLLPARAM
+select * from SWNCCOLLPARAM

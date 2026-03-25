@@ -1,0 +1,28 @@
+delete from OA2C_CLIENT
+select * from OA2C_CLIENT
+delete from OA2C_CLIENT_CONF
+select * from OA2C_CLIENT_CONF
+delete from OA2C_CLIENT_EXT
+select * from OA2C_CLIENT_EXT
+delete from OA2C_CLIENT_MULT
+select * from OA2C_CLIENT_MULT
+delete from OA2C_CLIENT_PROF
+select * from OA2C_CLIENT_PROF
+delete from OA2C_CLIENT_SCOP
+select * from OA2C_CLIENT_SCOP
+delete from OA2C_HTTPC_CFG
+select * from OA2C_HTTPC_CFG
+delete from OA2C_PARAM
+select * from OA2C_PARAM
+delete from OA2C_SAML2_ENT
+select * from OA2C_SAML2_ENT
+delete from OA2_C_SD_SC
+select * from OA2_C_SD_SC
+delete from OA2_C_SD_SCT
+select * from OA2_C_SD_SCT
+delete from OA2_SD_CL
+select * from OA2_SD_CL
+delete from OA2_SD_CL_SC
+select * from OA2_SD_CL_SC
+delete from OA2_SD_CLT
+select * from OA2_SD_CLT
