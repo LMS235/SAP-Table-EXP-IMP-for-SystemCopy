@@ -21,6 +21,7 @@
 # Version 1.8.7 - Correct UCON Template, ADD ALECUSTOMIZINGNOTADIR (ALECUSTOMIZING without TADIR)
 # Version 1.8.8 - New Template RZ20andRZ21, New Template SM37-S4 (old is SM37-R3), New Template OAUTHCONFIG, renaming some templates
 # Version 1.8.9 - New Template OAC0-NOTOA01
+# Version 1.9   - PowerShell Port for Windows
 
 ##### CONFIG EXPORT / IMPORT LOCATION #####
 export EXPIMPLOC=
