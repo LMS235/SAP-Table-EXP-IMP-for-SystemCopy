@@ -14,3 +14,7 @@ delete from VSCAN_PROFT
 select * from VSCAN_PROFT
 delete from VSCAN_SERVER
 select * from VSCAN_SERVER
+delete from VSCAN_PROF_MIME
+select * from VSCAN_PROF_MIME
+delete from VSCAN_PROF_PARGL
+select * from VSCAN_PROF_PARGL
