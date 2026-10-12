@@ -22,6 +22,7 @@
 # Version 1.8.9 - New Template OAC0-NOTOA01
 # Version 1.9   - PowerShell Port for Windows
 # Version 1.9.1 - Correct VSCAN Template
+# Version 1.10  - Security Hardening (permissions, checksums, target check, backup, user and config check)
 
 $ErrorActionPreference = 'Stop'
 
@@ -101,6 +102,95 @@ if ($seltables.Count -eq 0) {
     exit 24
 }
 
+# metadata of the source system (written by the export since version 1.10)
+$expsid    = Get-ExpImpMeta -Path $exportedtables -Key 'SID'
+$exphost   = Get-ExpImpMeta -Path $exportedtables -Key 'HOST'
+$expclient = Get-ExpImpMeta -Path $exportedtables -Key 'CLIENT'
+$expuser   = Get-ExpImpMeta -Path $exportedtables -Key 'USER'
+$expdate   = Get-ExpImpMeta -Path $exportedtables -Key 'DATE'
+$curhost   = [Environment]::MachineName
+function Get-OrUnknown { param([string]$Value) if ($Value) { return $Value } return 'unknown' }
+
+# list of the selected exports (PowerShell variables are case-insensitive:
+# the import loop variable $SELTABLES overwrites $seltables)
+$importlist = @($seltables)
+
+# verify the SHA-256 checksums of the selected exports
+Write-ExpImpLog '=== verify checksums ==='
+$checksumerror = @()
+foreach ($imptable in $importlist) {
+    $datfile = Join-Path $Global:EXPIMPLOC "$imptable.dat"
+    $expsha  = ''
+    foreach ($line in $okexports) {
+        $f = $line -split '\|'
+        if ($f[0] -eq $imptable) {
+            foreach ($field in $f) { if ($field.StartsWith('SHA256=')) { $expsha = $field.Substring(7) } }
+        }
+    }
+    if (-not $expsid) {
+        # export of an older version without metadata and checksums
+        Write-ExpImpLog "$imptable|NO CHECKSUM (export of an older version)"
+    } elseif (-not (Test-Path -LiteralPath $datfile)) {
+        Write-ExpImpLog "$imptable|ERROR data file missing"
+        $checksumerror += $imptable
+    } elseif (-not $expsha -or (Get-ExpImpSha256 -Path $datfile) -ne $expsha) {
+        Write-ExpImpLog "$imptable|ERROR checksum mismatch"
+        $checksumerror += $imptable
+    } else {
+        Write-ExpImpLog "$imptable|checksum OK"
+    }
+}
+Write-ExpImpLog '=== verify checksums ==='
+if ($checksumerror.Count -gt 0) {
+    Write-ExpImpLog "ERROR: checksum verification failed: $($checksumerror -join ' ')"
+    [void](Show-UiMsgBox -Text "Checksum verification FAILED - nothing was imported!`n`nThe data files of these exports are missing or were changed after the export:`n`n$($checksumerror -join ' ')`n`nDetails can be found in $($Global:EXPIMPLOGFILE)" -OkLabel 'EXIT')
+    exit 27
+}
+
+# confirm the import (show source and target system)
+$importwarning = ''
+$confirmsid    = $false
+if (-not $expsid) {
+    $importwarning += "`nWARNING: export of an older version without metadata and checksums,`n         the source system and the data files cannot be verified!`n"
+    $confirmsid = $true
+} elseif ($expsid -ne $env:SAPSYSTEMNAME) {
+    $importwarning += "`nWARNING: SAPSYSTEM MISMATCH - the export was created on $expsid!`n"
+    $confirmsid = $true
+}
+if ($exphost -and $exphost -ne $curhost) {
+    $importwarning += "`nINFO: the export was created on another host ($exphost)`n"
+}
+$confirmtext = @"
+You are going to IMPORT into
+
+  SAPSYSTEM: $($env:SAPSYSTEMNAME) | HOST: $curhost
+
+The export was created on
+
+  SAPSYSTEM: $(Get-OrUnknown $expsid) | HOST: $(Get-OrUnknown $exphost) | CLIENT: $(Get-OrUnknown $expclient)
+  USER: $(Get-OrUnknown $expuser) | DATE: $(Get-OrUnknown $expdate)
+$importwarning
+Selected exports:
+$($importlist -join ' ')
+
+The existing content of these tables will be DELETED and replaced!
+
+Continue with the import?
+"@
+$continue = Show-UiYesNo -Text $confirmtext -YesLabel 'Import' -NoLabel 'Exit' -DefaultNo
+if ($continue -ne 0) {
+    Write-ExpImpLog 'INFO: import not confirmed'
+    exit 28
+}
+if ($confirmsid) {
+    $typed = Show-UiInputBox -Text "The source system of the export could not be verified!`n`nType the SID of this system ($($env:SAPSYSTEMNAME)) to confirm the import:"
+    if ($typed.Cancelled -or $typed.Value -cne $env:SAPSYSTEMNAME) {
+        Write-ExpImpLog 'INFO: import not confirmed (SID not confirmed)'
+        exit 28
+    }
+}
+Write-ExpImpLog "INFO: import confirmed (source: SID=$(Get-OrUnknown $expsid) HOST=$(Get-OrUnknown $exphost) DATE=$(Get-OrUnknown $expdate))"
+
 # export info file
 $importedtables = Join-Path $Global:EXPIMPLOC 'imported_tables.conf'
 
@@ -116,7 +206,7 @@ Write-AsciiFile -Path $importedtables -Lines @(
 # import tables
 try {
     Start-UiProgressView -Text 'Import selected tables'
-    foreach ($SELTABLES in $seltables) {
+    foreach ($SELTABLES in $importlist) {
         $datfile = Join-Path $Global:EXPIMPLOC "$SELTABLES.dat"
         $logfile = Join-Path $Global:EXPIMPLOC "$SELTABLES.imp.log"
 

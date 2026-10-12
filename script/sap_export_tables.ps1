@@ -22,6 +22,7 @@
 # Version 1.8.9 - New Template OAC0-NOTOA01
 # Version 1.9   - PowerShell Port for Windows
 # Version 1.9.1 - Correct VSCAN Template
+# Version 1.10  - Security Hardening (permissions, checksums, target check, backup, user and config check)
 
 $ErrorActionPreference = 'Stop'
 
@@ -41,21 +42,30 @@ $selectedtablesforexport = Join-Path $Global:EXPIMPLOC 'selected_tables_for_expo
 $exportedtables          = Join-Path $Global:EXPIMPLOC 'exported_tables.conf'
 $templatedir             = Join-Path $Global:global_pwd 'templates'
 
-# check existing data
-if (Test-Path -LiteralPath $selectedtablesforexport) {
-    $continue = Show-UiYesNo -Text "There are export files in $($Global:EXPIMPLOC)`nIf you continue these files will be deleted!" -YesLabel 'Continue' -NoLabel 'Exit'
+# check existing data of a previous run - copy it to a backup directory before it is deleted
+$oldrunfiles = @(Get-ExpImpRunFiles)
+if ($oldrunfiles.Count -gt 0) {
+    $backupdir = Join-Path (Join-Path $Global:EXPIMPLOC 'backup') (Get-Date -Format 'yyyyMMdd_HHmmss')
+    $continue = Show-UiYesNo -Text "There are files of a previous run in $($Global:EXPIMPLOC)`n`nIf you continue these files will be copied to`n$backupdir`nand then deleted!" -YesLabel 'Continue' -NoLabel 'Exit'
     switch ($continue) {
         0 {
+            Write-ExpImpLog "INFO: backup old files to $backupdir"
+            try {
+                $null = New-Item -ItemType Directory -Path $backupdir -Force
+                foreach ($f in $oldrunfiles) { Copy-Item -LiteralPath $f.FullName -Destination $backupdir -Force }
+            } catch {
+                Write-ExpImpLog "ERROR: backup of the previous run to $backupdir failed, nothing deleted ($($_.Exception.Message))"
+                exit 15
+            }
             Write-ExpImpLog 'INFO: delete old files'
-            Remove-Item -LiteralPath $selectedtablesforexport -Force
-            if (Test-Path -LiteralPath $exportedtables) { Remove-Item -LiteralPath $exportedtables -Force }
+            foreach ($f in $oldrunfiles) { Remove-Item -LiteralPath $f.FullName -Force }
         }
         1 {
             Write-ExpImpLog 'INFO: exit because old run detected'
             exit 10
         }
         # check ESC hit
-        255 {
+        default {
             Write-ExpImpLog 'INFO: exit because old run (ESC hit)'
             exit 10
         }
@@ -74,11 +84,13 @@ $seltables = @($selection.Tags)
 Write-AsciiFile -Path $selectedtablesforexport -Lines $seltables
 if ($selection.Cancelled) {
     Write-ExpImpLog 'ERROR: fail to select templates for export'
+    Remove-Item -LiteralPath $selectedtablesforexport -Force -ErrorAction SilentlyContinue
     exit 11
 }
 Clear-Host
 if ($seltables.Count -eq 0) {
     Write-ExpImpLog 'ERROR: no template selected for export'
+    Remove-Item -LiteralPath $selectedtablesforexport -Force -ErrorAction SilentlyContinue
     exit 12
 }
 
@@ -87,17 +99,18 @@ Write-ExpImpLog '=== selected tables for export ==='
 foreach ($t in $seltables) { Write-ExpImpLog $t }
 Write-ExpImpLog '=== selected tables for export ==='
 
-# delete old exports
-Get-ChildItem -LiteralPath $Global:EXPIMPLOC -Filter '*.tpl'     -File -ErrorAction SilentlyContinue | Remove-Item -Force -ErrorAction SilentlyContinue
-Get-ChildItem -LiteralPath $Global:EXPIMPLOC -Filter '*.exp.log' -File -ErrorAction SilentlyContinue | Remove-Item -Force -ErrorAction SilentlyContinue
-Get-ChildItem -LiteralPath $Global:EXPIMPLOC -Filter '*.dat'     -File -ErrorAction SilentlyContinue | Remove-Item -Force -ErrorAction SilentlyContinue
-
-# info file
+# info file (with metadata of the source system - checked by the import)
 Write-AsciiFile -Path $exportedtables -Lines @(
-    '# Template name | Return Code of Export'
+    '# Template name | Return Code of Export | SHA-256 of the data file'
     '# ====================================='
     '# Exported to:'
     ('# ' + $Global:EXPIMPLOC)
+    '# ====================================='
+    ('# SID=' + $env:SAPSYSTEMNAME)
+    ('# HOST=' + [Environment]::MachineName)
+    ('# CLIENT=' + $Global:EXPCLIENT)
+    ('# USER=' + $Global:CURUSER)
+    ('# DATE=' + (Get-Date -Format 'yyyy-MM-dd HH:mm:ss'))
     '# ====================================='
 )
 
@@ -139,7 +152,9 @@ try {
         } finally {
             $ErrorActionPreference = $prevEap
         }
-        Add-Content -LiteralPath $exportedtables -Value "$SELTABLES|RC=$rc" -Encoding ascii
+        $sha256 = ''
+        if (Test-Path -LiteralPath $datfile) { $sha256 = Get-ExpImpSha256 -Path $datfile }
+        Add-Content -LiteralPath $exportedtables -Value "$SELTABLES|RC=$rc|SHA256=$sha256" -Encoding ascii
         Write-Host "=== Export END $SELTABLES ===" -ForegroundColor Cyan
         Write-Host ''
         Start-Sleep -Seconds 1

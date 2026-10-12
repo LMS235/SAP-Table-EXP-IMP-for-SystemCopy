@@ -14,7 +14,8 @@ A simple script for exporting and importing SAP tables during a system copy.
 >
 > `sap_tab_exp_imp.sh must be executable (e.g. chmod u+x sap_tab_exp_imp.sh)`
 
-Needs the `dialog` command (a prebuilt `dialog` for AIX is included in `dialogaix`).
+Needs the `dialog` command (a prebuilt `dialog` for AIX is included in `dialogaix`)
+and a tool for SHA-256 checksums (`sha256sum`, `shasum`, `csum` or `openssl`).
 
 ## Windows
 
@@ -30,6 +31,7 @@ Requirements:
 * a real console host (`conhost` / Windows Terminal) - the **PowerShell ISE is not supported**
 * `R3trans.exe` must be in the `PATH` (it is when you are logged on as `<sid>adm`)
 * `SAPSYSTEMNAME` must be set (it is when you are logged on as `<sid>adm`)
+* the script must be run as `<sid>adm` (not as the built-in Administrator or a system account)
 
 The PowerShell version is a full port of the shell script and uses the same
 templates, the same config options, the same file names and the same exit codes.
@@ -53,6 +55,7 @@ Keys in the console UI:
 | `sap_tab_exp_imp.sh` | main script (Unix / Linux / AIX) |
 | `script/sap_export_tables.sh` | export script (Unix / Linux / AIX) |
 | `script/sap_import_tables.sh` | import script (Unix / Linux / AIX) |
+| `script/sap_expimp_lib.sh` | helper functions (Unix / Linux / AIX) |
 | `sap_tab_exp_imp.ps1` | main script (Windows) |
 | `script/sap_export_tables.ps1` | export script (Windows) |
 | `script/sap_import_tables.ps1` | import script (Windows) |
@@ -65,24 +68,55 @@ Both main scripts have the same three config options at the top:
 
 | Option | Description |
 | --- | --- |
-| `EXPIMPLOC` | export / import location, default `<script dir>/expimp/<SID>` |
-| `EXPCLIENT` | `ALL`, `000` or a client number, default `ALL` |
-| `PARALLEL` | R3trans parallel parameter (SAP note 1127194), default `0` |
+| `EXPIMPLOC` | export / import location (absolute path), default `<script dir>/expimp/<SID>` |
+| `EXPCLIENT` | `ALL`, `DEFAULT` or a 3-digit client number, default `ALL` |
+| `PARALLEL` | R3trans parallel parameter (SAP note 1127194), `0` or a positive number, default `0` |
+| `EXPIMPGROUP` | Windows only: group with access to `EXPIMPLOC` (e.g. other `<sid>adm` users), default `SAP_LocalAdmin` |
+
+Invalid values stop the script with exit code 91.
+
+## Security
+
+> [!WARNING]
+> The exports contain **sensitive data**, e.g. PSEs with private keys (`STRUST`),
+> the secure storage (`SECSTORE`), RFC destinations (`SM59`), OAuth, LDAP and SAML2 configuration.
+
+* The script must be run as `<sid>adm` (not as `root` / built-in Administrator / system account).
+* Unix: all files and directories are created with `umask 007` (files `660`, directories `770`),
+  so the export and the import can be run by different `<sid>adm` users of the same group (`sapsys`).
+  The script stops if `EXPIMPLOC` contains files of another group or files writable by others.
+* Windows: `EXPIMPLOC` gets its own permissions without inheritance: full control for the current user,
+  Administrators and SYSTEM, modify for `EXPIMPGROUP`.
+* Every export writes the SHA-256 checksum of each data file and the source system
+  (SID, host, client, user, date) into `exported_tables.conf`.
+* Before the import the checksums are verified (exit code 27 if a data file is missing or was changed)
+  and the import has to be confirmed (default is "Exit"). If the SID of the export differs from the
+  current SID, or the export was created by an older version without checksums, the SID of the
+  current system has to be typed in to confirm the import.
+* Before a new export, the files of the previous run are copied to `EXPIMPLOC/backup/<timestamp>`
+  and only then deleted. Backups are never deleted by the script.
+* The data files are never deleted after an import (they can be imported several times or into
+  several systems) - delete `EXPIMPLOC` manually when it is no longer needed.
 
 ## Exit codes
 
 | Code | Description |
 | --- | --- |
-| 99 | started as `root` (Unix) / built-in `Administrator` (Windows) |
+| 99 | started as `root` (Unix) / built-in `Administrator` or a system account (Windows) |
 | 98 | cannot find SAP SID |
 | 97 | cannot start `dialog` (Unix) / the console UI (Windows) |
 | 96 | hit ESC |
 | 95 | cannot find `R3trans.exe` (Windows only) |
+| 94 | cannot create / secure the export location (group / permissions) |
+| 93 | no SHA-256 tool found (Unix only) |
+| 92 | user is not `<sid>adm` |
+| 91 | invalid config value (`EXPIMPLOC`, `EXPCLIENT`, `PARALLEL`) |
 | 10 | export: exit because old run detected |
 | 11 | export: fail to select templates for export |
 | 12 | export: no template selected for export |
 | 13 | export: error while export |
 | 14 | export: export info error |
+| 15 | export: backup of the previous run failed |
 | 20 | import: no exports found for import |
 | 21 | import: exit because old run detected |
 | 22 | import: no OK exports found for import |
@@ -90,5 +124,7 @@ Both main scripts have the same three config options at the top:
 | 24 | import: no exports selected for import |
 | 25 | import: error while import |
 | 26 | import: import info error |
+| 27 | import: checksum verification failed |
+| 28 | import: import not confirmed |
 
 Website: www.florian-lamml.de

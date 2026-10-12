@@ -22,6 +22,7 @@
 # Version 1.8.9 - New Template OAC0-NOTOA01
 # Version 1.9   - PowerShell Port for Windows
 # Version 1.9.1 - Correct VSCAN Template
+# Version 1.10  - Security Hardening (permissions, checksums, target check, backup, user and config check)
 
 ##### CONFIG EXPORT / IMPORT LOCATION #####
 $EXPIMPLOC = ''
@@ -36,6 +37,15 @@ $EXPCLIENT = 'ALL'
 ##### CONFIG PARALLEL (SAP 1127194) #######
 # DEFAULT 0, Max 1-2x CPU Count
 $PARALLEL = 0
+###########################################
+
+##### CONFIG ACCESS GROUP #################
+# windows group that gets access to the
+# export / import location (besides the
+# current user, Administrators and SYSTEM)
+# e.g. if export and import run as
+# different <sid>adm users, '' = none
+$EXPIMPGROUP = 'SAP_LocalAdmin'
 ###########################################
 
 ##### info ################################
@@ -55,17 +65,21 @@ $PARALLEL = 0
 
 ##### list of exit codes ##################
 # general
-# 99 - you try to run as built-in Administrator
+# 99 - you try to run as built-in Administrator or a system account
 # 98 - cannot find SAP SID
 # 97 - cannot start the console UI
 # 96 - Hit ESC
 # 95 - cannot find R3trans.exe
+# 94 - cannot create / secure export location (permissions)
+# 92 - user is not <sid>adm
+# 91 - invalid config value (EXPIMPLOC, EXPCLIENT, PARALLEL)
 # export
 # 10 - exit because old run detected
 # 11 - fail to select templates for export
 # 12 - no template selected for export
 # 13 - error while export
 # 14 - export info error
+# 15 - backup of the previous run failed
 # import
 # 20 - no exports found for import
 # 21 - exit because old run detected
@@ -74,6 +88,8 @@ $PARALLEL = 0
 # 24 - no exports selected for import
 # 25 - error while import
 # 26 - import info error
+# 27 - checksum verification failed
+# 28 - import not confirmed
 ###########################################
 
 $ErrorActionPreference = 'Stop'
@@ -99,34 +115,18 @@ if (-not (Test-UiHost)) {
     exit 97
 }
 
-# check export location (and create directory)
-if ([string]::IsNullOrWhiteSpace($EXPIMPLOC)) {
-    $Global:EXPIMPLOCINFO = 'EXPIMPLOC is not set, use default'
-    $Global:EXPIMPLOC     = Join-Path (Join-Path $Global:global_pwd 'expimp') "$env:SAPSYSTEMNAME"
-} else {
-    $Global:EXPIMPLOCINFO = 'EXPIMPLOC is set to'
-    $Global:EXPIMPLOC     = $EXPIMPLOC
-}
-if (-not (Test-Path -LiteralPath $Global:EXPIMPLOC)) {
-    $null = New-Item -ItemType Directory -Path $Global:EXPIMPLOC -Force
-}
-
-# set logfile
-$Global:EXPIMPLOGFILE = Join-Path $Global:EXPIMPLOC ('EXP_IMP_LOG_' + (Get-Date -Format 'dd_MM_yyyy') + '.txt')
-
-Write-ExpImpLog (Get-Date -Format 'dd.MM.yyyy-HH:mm')
-
 # "root" check - on windows the equivalent is the built-in Administrator account
 # (well-known RID 500, works with every language and even if the account was renamed)
+# and the system accounts (SYSTEM, LOCAL SERVICE, NETWORK SERVICE)
 $Global:CURUSER = "$env:USERNAME"
 $isBuiltInAdmin = $false
 try {
     $wi = [Security.Principal.WindowsIdentity]::GetCurrent()
     $Global:CURUSER = $wi.Name
-    if ($wi.User.Value -match '-500$') { $isBuiltInAdmin = $true }
+    if ($wi.User.Value -match '-500$' -or $wi.User.Value -in @('S-1-5-18', 'S-1-5-19', 'S-1-5-20')) { $isBuiltInAdmin = $true }
 } catch { }
 if ($isBuiltInAdmin) {
-    Write-Host 'This script must not be run as the built-in Administrator user!'
+    Write-Host 'This script must not be run as the built-in Administrator or a system account!'
     Write-Host 'Please run it as <sid>adm.'
     Write-Host '... EXIT NOW'
     exit 99
@@ -139,11 +139,79 @@ if ([string]::IsNullOrWhiteSpace($env:SAPSYSTEMNAME)) {
     exit 98
 }
 
+# <sid>adm check
+$sidadm   = $env:SAPSYSTEMNAME.ToLower() + 'adm'
+$username = ($Global:CURUSER -split '\\')[-1]
+if ($username -ne $sidadm) {
+    Write-Host "This script must be run as $sidadm (current user: $($Global:CURUSER))!"
+    Write-Host '... EXIT NOW'
+    exit 92
+}
+
+# check config values (they are written into the R3trans control files)
+$EXPCLIENT = "$EXPCLIENT".Trim().ToUpper()
+if ($EXPCLIENT -notmatch '^(ALL|DEFAULT|[0-9]{3})\z') {
+    Write-Host "EXPCLIENT '$EXPCLIENT' is invalid (allowed: ALL, DEFAULT or a 3-digit client number)"
+    Write-Host '... EXIT NOW'
+    exit 91
+}
+
 # PARALLEL check empty variable
 if ($null -eq $PARALLEL -or "$PARALLEL" -eq '') { $PARALLEL = 0 }
+if ("$PARALLEL" -notmatch '^[0-9]+\z') {
+    Write-Host "PARALLEL '$PARALLEL' is invalid (allowed: 0 or a positive number)"
+    Write-Host '... EXIT NOW'
+    exit 91
+}
 
 $Global:EXPCLIENT = $EXPCLIENT
 $Global:PARALLEL  = [int]$PARALLEL
+
+# check export location
+if ([string]::IsNullOrWhiteSpace($EXPIMPLOC)) {
+    $Global:EXPIMPLOCINFO = 'EXPIMPLOC is not set, use default'
+    $Global:EXPIMPLOC     = Join-Path (Join-Path $Global:global_pwd 'expimp') "$env:SAPSYSTEMNAME"
+} else {
+    $Global:EXPIMPLOCINFO = 'EXPIMPLOC is set to'
+    $Global:EXPIMPLOC     = $EXPIMPLOC
+}
+if ($Global:EXPIMPLOC -match "['\r\n]") {
+    Write-Host "EXPIMPLOC '$($Global:EXPIMPLOC)' is invalid (must not contain quotes or line breaks)"
+    Write-Host '... EXIT NOW'
+    exit 91
+}
+if ($Global:EXPIMPLOC -notmatch '^([A-Za-z]:\\|\\\\)') {
+    Write-Host "EXPIMPLOC '$($Global:EXPIMPLOC)' is invalid (must be an absolute path like D:\expimp or \\server\share)"
+    Write-Host '... EXIT NOW'
+    exit 91
+}
+
+# create export location and secure it (only <sid>adm, the access group, Administrators and SYSTEM)
+try {
+    if (-not (Test-Path -LiteralPath $Global:EXPIMPLOC)) {
+        $null = New-Item -ItemType Directory -Path $Global:EXPIMPLOC -Force
+    }
+} catch {
+    Write-Host "cannot create $($Global:EXPIMPLOC)"
+    Write-Host '... EXIT NOW'
+    exit 94
+}
+$aclWarning = Protect-ExpImpLocation -Path $Global:EXPIMPLOC -Group $EXPIMPGROUP
+if ($aclWarning -eq 'ERROR') {
+    Write-Host "cannot set permissions of $($Global:EXPIMPLOC)"
+    Write-Host '... EXIT NOW'
+    exit 94
+}
+
+# set logfile
+$Global:EXPIMPLOGFILE = Join-Path $Global:EXPIMPLOC ('EXP_IMP_LOG_' + (Get-Date -Format 'dd_MM_yyyy') + '.txt')
+
+Write-ExpImpLog (Get-Date -Format 'dd.MM.yyyy-HH:mm')
+if ($aclWarning) {
+    Write-ExpImpLog "WARNING: $aclWarning"
+    Write-Host "WARNING: $aclWarning" -ForegroundColor Yellow
+    Start-Sleep -Seconds 3
+}
 
 # check if R3trans is available
 $r3 = Get-Command 'R3trans.exe' -ErrorAction SilentlyContinue

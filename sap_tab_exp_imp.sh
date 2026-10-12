@@ -23,6 +23,7 @@
 # Version 1.8.9 - New Template OAC0-NOTOA01
 # Version 1.9   - PowerShell Port for Windows
 # Version 1.9.1 - Correct VSCAN Template
+# Version 1.10  - Security Hardening (permissions, checksums, target check, backup, user and config check)
 
 ##### CONFIG EXPORT / IMPORT LOCATION #####
 export EXPIMPLOC=
@@ -49,6 +50,7 @@ export PARALLEL=0
 
 # Prerequisites ###########################
 # need 'dialog' to run
+# need sha256sum, shasum, csum or openssl
 ###########################################
 
 ##### list of exit codes ##################
@@ -57,12 +59,17 @@ export PARALLEL=0
 # 98 - cannot find SAP SID
 # 97 - cannot start dialog
 # 96 - Hit ESC
+# 94 - cannot create / secure export location (owner / permissions)
+# 93 - no SHA-256 tool found (sha256sum, shasum, csum or openssl)
+# 92 - user is not <sid>adm
+# 91 - invalid config value (EXPIMPLOC, EXPCLIENT, PARALLEL)
 # export
 # 10 - exit because old run detected
 # 11 - fail to select templates for export
 # 12 - no template selected for export
 # 13 - error while export
 # 14 - export info error
+# 15 - backup of the previous run failed
 # import
 # 20 - no exports found for import
 # 21 - exit because old run detected
@@ -71,6 +78,8 @@ export PARALLEL=0
 # 24 - no exports selected for import
 # 25 - error while import
 # 26 - import info error
+# 27 - checksum verification failed
+# 28 - import not confirmed
 ###########################################
 
 # set global variables
@@ -82,23 +91,14 @@ export global_title="SAP Table EXP/IMP for SystemCopy (c) Florian Lamml 2026"
 export global_backtitle="SAP Table EXP/IMP for SystemCopy (c) Florian Lamml 2026"
 export global_copy="(c) Florian Lamml 2026"
 
-# check export location (and create directory)
-if [ -z "$EXPIMPLOC" ]; 
- then 
- export EXPIMPLOCINFO="EXPIMPLOC is not set, use default";
- export EXPIMPLOC=$global_pwd/expimp/$SAPSYSTEMNAME
-else 
- export EXPIMPLOCINFO="EXPIMPLOC is set to"; 
-fi
-[ ! -d "$EXPIMPLOC" ] && mkdir -p $EXPIMPLOC
-
-# set logfile
-export EXPIMPLOGFILE=$EXPIMPLOC/EXP_IMP_LOG_$(date "+%d_%m_%Y").txt
-echo $(date "+%d.%m.%Y-%H:%M") >> $EXPIMPLOGFILE
+# the export files contain sensitive data (PSEs, secure storage, RFC destinations ...)
+# all files and directories created by this tool are only accessible by the owner and
+# the group (sapsys) - export and import can run as different <sid>adm users of the group
+umask 007
 
 # root check
-export CURUSER=$(whoami)
-if [ $CURUSER == "root" ];
+export CURUSER=$(id -un)
+if [ "$(id -u)" -eq 0 ];
 then
 	echo "This script must not be run as root user!" 
 	echo "... EXIT NOW"
@@ -113,10 +113,107 @@ if [ -z "$SAPSYSTEMNAME" ];
    exit 98
 fi
 
+# <sid>adm check
+SIDADM="$(echo "$SAPSYSTEMNAME" | tr '[:upper:]' '[:lower:]')adm"
+if [ "$CURUSER" != "$SIDADM" ];
+ then
+   echo "This script must be run as $SIDADM (current user: $CURUSER)!"
+   echo "... EXIT NOW"
+   exit 92
+fi
+
+# check config values (they are written into the R3trans control files)
+EXPCLIENT=$(echo "$EXPCLIENT" | tr '[:lower:]' '[:upper:]')
+case "$EXPCLIENT" in
+ ALL|DEFAULT|[0-9][0-9][0-9]) ;;
+ *)
+   echo "EXPCLIENT '$EXPCLIENT' is invalid (allowed: ALL, DEFAULT or a 3-digit client number)"
+   echo "... EXIT NOW"
+   exit 91
+   ;;
+esac
+export EXPCLIENT
+
 # PARALLEL check empty variable
 if [ -z "${PARALLEL}" ]; 
  then
 	PARALLEL=0
+fi
+case "$PARALLEL" in
+ *[!0-9]*)
+   echo "PARALLEL '$PARALLEL' is invalid (allowed: 0 or a positive number)"
+   echo "... EXIT NOW"
+   exit 91
+   ;;
+esac
+export PARALLEL
+
+# check export location
+if [ -z "$EXPIMPLOC" ]; 
+ then 
+ export EXPIMPLOCINFO="EXPIMPLOC is not set, use default";
+ export EXPIMPLOC=$global_pwd/expimp/$SAPSYSTEMNAME
+else 
+ export EXPIMPLOCINFO="EXPIMPLOC is set to"; 
+fi
+NEWLINE='
+'
+case "$EXPIMPLOC" in
+ *"'"*|*"$NEWLINE"*)
+   echo "EXPIMPLOC '$EXPIMPLOC' is invalid (must not contain quotes or line breaks)"
+   echo "... EXIT NOW"
+   exit 91
+   ;;
+ /*) ;;
+ *)
+   echo "EXPIMPLOC '$EXPIMPLOC' is invalid (must be an absolute path)"
+   echo "... EXIT NOW"
+   exit 91
+   ;;
+esac
+
+# create export location and secure it (only users of the group of <sid>adm may read and write)
+CURGROUP=$(id -gn)
+if [ ! -d "$EXPIMPLOC" ] && ! mkdir -p "$EXPIMPLOC";
+ then
+   echo "cannot create $EXPIMPLOC"
+   echo "... EXIT NOW"
+   exit 94
+fi
+FOREIGNFILE=$(find "$EXPIMPLOC" ! -group "$CURGROUP" 2>/dev/null | head -1)
+if [ -n "$FOREIGNFILE" ];
+ then
+   echo "$EXPIMPLOC contains files not belonging to group $CURGROUP (e.g. $FOREIGNFILE)!"
+   echo "... EXIT NOW"
+   exit 94
+fi
+if ! find "$EXPIMPLOC" -user "$CURUSER" | while IFS= read -r OWNFILE; do chmod g+rwX,o-rwx "$OWNFILE" || exit 1; done;
+ then
+   echo "cannot set permissions in $EXPIMPLOC"
+   echo "... EXIT NOW"
+   exit 94
+fi
+FOREIGNFILE=$(find "$EXPIMPLOC" -perm -002 2>/dev/null | head -1)
+if [ -n "$FOREIGNFILE" ];
+ then
+   echo "$EXPIMPLOC contains files writable by others (e.g. $FOREIGNFILE)!"
+   echo "... EXIT NOW"
+   exit 94
+fi
+
+# set logfile
+export EXPIMPLOGFILE=$EXPIMPLOC/EXP_IMP_LOG_$(date "+%d_%m_%Y").txt
+echo $(date "+%d.%m.%Y-%H:%M") >> $EXPIMPLOGFILE
+
+# SHA-256 tool for the checksums of the export files
+. "$global_pwd/script/sap_expimp_lib.sh"
+export SHA256TOOL=$(expimp_find_sha256_tool)
+if [ -z "$SHA256TOOL" ];
+ then
+   echo "cannot find a tool for SHA-256 checksums (sha256sum, shasum, csum or openssl)"
+   echo "... EXIT NOW"
+   echo "ERROR: no SHA-256 tool found" >> $EXPIMPLOGFILE
+   exit 93
 fi
 
 # check AIX and set PATH and LIBPATH to use linux dialog (build from dialog-1.2-20150225 with gcc-4.8.3-1.aix7.1 on AIX 7.1) on AIX

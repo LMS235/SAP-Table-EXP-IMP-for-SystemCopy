@@ -23,6 +23,7 @@
 # Version 1.8.9 - New Template OAC0-NOTOA01
 # Version 1.9   - PowerShell Port for Windows
 # Version 1.9.1 - Correct VSCAN Template
+# Version 1.10  - Security Hardening (permissions, checksums, target check, backup, user and config check)
 
 # --- key codes -----------------------------------------------------------
 $Global:UiKeyEnter = 13
@@ -69,6 +70,73 @@ function Test-UiHost {
 function Write-ExpImpLog {
     param([string]$Message)
     Add-Content -LiteralPath $Global:EXPIMPLOGFILE -Value $Message -Encoding ascii
+}
+
+# -------------------------------------------------------------------------
+# export / import location helpers (permissions, checksums, metadata)
+# -------------------------------------------------------------------------
+
+# protect the export location (windows equivalent of umask 007 / chmod 770):
+# no inherited permissions, full control only for the current user, Administrators
+# and SYSTEM, modify for the access group (e.g. other <sid>adm users)
+# returns '' (ok), a warning text, or 'ERROR'
+function Protect-ExpImpLocation {
+    param([string]$Path, [string]$Group)
+    $warning = ''
+    try {
+        $acl  = New-Object System.Security.AccessControl.DirectorySecurity
+        $acl.SetAccessRuleProtection($true, $false)
+        $full = @(
+            [Security.Principal.WindowsIdentity]::GetCurrent().User,
+            (New-Object Security.Principal.SecurityIdentifier 'S-1-5-32-544'),  # Administrators
+            (New-Object Security.Principal.SecurityIdentifier 'S-1-5-18')       # SYSTEM
+        )
+        foreach ($sid in $full) {
+            $acl.AddAccessRule((New-Object System.Security.AccessControl.FileSystemAccessRule($sid, 'FullControl', 'ContainerInherit,ObjectInherit', 'None', 'Allow')))
+        }
+        if (-not [string]::IsNullOrWhiteSpace($Group)) {
+            try {
+                $gsid = (New-Object Security.Principal.NTAccount $Group).Translate([Security.Principal.SecurityIdentifier])
+                $acl.AddAccessRule((New-Object System.Security.AccessControl.FileSystemAccessRule($gsid, 'Modify', 'ContainerInherit,ObjectInherit', 'None', 'Allow')))
+            } catch {
+                $warning = "access group '$Group' not found - only the current user, Administrators and SYSTEM have access to $Path"
+            }
+        }
+        Set-Acl -LiteralPath $Path -AclObject $acl
+    } catch {
+        # not allowed to change the permissions (e.g. import by another <sid>adm) -
+        # ok if the location is already protected by an earlier run
+        try {
+            if ((Get-Acl -LiteralPath $Path).AreAccessRulesProtected) { return $warning }
+        } catch { }
+        return 'ERROR'
+    }
+    return $warning
+}
+
+# SHA-256 checksum of a file (lower case hex)
+function Get-ExpImpSha256 {
+    param([string]$Path)
+    return (Get-FileHash -LiteralPath $Path -Algorithm SHA256).Hash.ToLower()
+}
+
+# value of a metadata line "# KEY=value" in an info file
+function Get-ExpImpMeta {
+    param([string]$Path, [string]$Key)
+    foreach ($line in @(Get-Content -LiteralPath $Path)) {
+        if ($line.StartsWith("# $Key=")) { return $line.Substring($Key.Length + 3) }
+    }
+    return ''
+}
+
+# files of a previous export / import run in EXPIMPLOC
+function Get-ExpImpRunFiles {
+    $names = @('selected_tables_for_export.conf', 'exported_tables.conf', 'exported_tables_ok.conf',
+               'selected_tables_import.conf', 'imported_tables.conf')
+    return @(Get-ChildItem -LiteralPath $Global:EXPIMPLOC -File | Where-Object {
+        $names -contains $_.Name -or $_.Name -like '*.tpl' -or $_.Name -like '*.dat' -or
+        $_.Name -like '*.exp.log' -or $_.Name -like '*.imp.log'
+    })
 }
 
 function Read-UiKey {
@@ -284,13 +352,13 @@ function Show-UiMsgBox {
 }
 
 # -------------------------------------------------------------------------
-# yesno    -> returns 0 (yes) / 1 (no) / 255 (ESC)
+# yesno    -> returns 0 (yes) / 1 (no) / 255 (ESC), -DefaultNo preselects "no"
 # -------------------------------------------------------------------------
 function Show-UiYesNo {
-    param([string]$Text, [string]$YesLabel = 'Yes', [string]$NoLabel = 'No')
+    param([string]$Text, [string]$YesLabel = 'Yes', [string]$NoLabel = 'No', [switch]$DefaultNo)
     Clear-Host
     $Global:UiFrameHeight = 0
-    $cur = 0
+    $cur = if ($DefaultNo) { 1 } else { 0 }
     while ($true) {
         $box  = Get-UiBoxSize
         $rows = New-Object System.Collections.Generic.List[object]
@@ -320,6 +388,42 @@ function Show-UiYesNo {
                 $c = "$($key.Character)".ToLower()
                 if ($c -eq 'y') { Clear-Host; return 0 }
                 if ($c -eq 'n') { Clear-Host; return 1 }
+            }
+        }
+    }
+}
+
+# -------------------------------------------------------------------------
+# inputbox -> returns [PSCustomObject] Cancelled / Value
+# -------------------------------------------------------------------------
+function Show-UiInputBox {
+    param([string]$Text, [int]$MaxLength = 40)
+    Clear-Host
+    $Global:UiFrameHeight = 0
+    $value = ''
+    while ($true) {
+        $box  = Get-UiBoxSize
+        $rows = New-Object System.Collections.Generic.List[object]
+        $rows.Add((New-UiInnerRow $box ''))
+        foreach ($l in (Split-UiText $Text ($box.InW - 2))) {
+            $rows.Add((New-UiInnerRow $box (' ' + $l)))
+        }
+        $rows.Add((New-UiInnerRow $box ''))
+        $rows.Add((New-UiInnerRow $box ('  > ' + $value + '_') $Global:UiSelFg $Global:UiSelBg))
+        while ($rows.Count -lt ($box.InH - 3)) { $rows.Add((New-UiInnerRow $box '')) }
+        $rows.Add((New-UiButtonRow $box @('< OK >', '<Cancel>')))
+        $rows.Add((New-UiInnerRow $box ''))
+        $rows.Add((New-UiInnerRow $box '  [ENTER] OK   [BACKSPACE] delete   [ESC] cancel' $Global:UiFrameFg $Global:UiBoxBg))
+        Write-UiFrame (Build-UiFrame $box $Global:global_title $rows)
+
+        $key = Read-UiKey
+        switch ($key.VirtualKeyCode) {
+            $Global:UiKeyEsc   { Clear-Host; return [PSCustomObject]@{ Cancelled = $true;  Value = '' } }
+            $Global:UiKeyEnter { Clear-Host; return [PSCustomObject]@{ Cancelled = $false; Value = $value } }
+            8 { if ($value.Length -gt 0) { $value = $value.Substring(0, $value.Length - 1) } }    # backspace
+            default {
+                $c = [int][char]$key.Character
+                if ($c -ge 32 -and $c -lt 127 -and $value.Length -lt $MaxLength) { $value += [char]$c }
             }
         }
     }

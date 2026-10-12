@@ -23,35 +23,43 @@
 # Version 1.8.9 - New Template OAC0-NOTOA01
 # Version 1.9   - PowerShell Port for Windows
 # Version 1.9.1 - Correct VSCAN Template
+# Version 1.10  - Security Hardening (permissions, checksums, target check, backup, user and config check)
 
-# set config file and delete old one
+# helper functions (checksums, files of a previous run)
+. "$(dirname "$0")/sap_expimp_lib.sh"
+
+# set config file
 export selectedtablesforexport=$EXPIMPLOC/selected_tables_for_export.conf
 export exportedtables=$EXPIMPLOC/exported_tables.conf
 
-# check existing data
-if [ -e $selectedtablesforexport ]
+# check existing data of a previous run - copy it to a backup directory before it is deleted
+OLDRUNFILES=$(expimp_run_files)
+if [ -n "$OLDRUNFILES" ]
  then
-	dialog --title "$global_title" --backtitle "$global_backtitle"  --yes-label "Continue" --no-label "Exit" --yesno  "There are export files in $EXPIMPLOC\nIf you continue these files will be deleted!" $global_height $global_width 
+	BACKUPDIR=$EXPIMPLOC/backup/$(date "+%Y%m%d_%H%M%S")
+	dialog --title "$global_title" --backtitle "$global_backtitle"  --yes-label "Continue" --no-label "Exit" --yesno  "There are files of a previous run in $EXPIMPLOC\n\nIf you continue these files will be copied to\n$BACKUPDIR\nand then deleted!" $global_height $global_width 
 	CONTINUE=$?
-	for choice in $CONTINUE
-	do
-		case $choice in
-			0)
-				echo "INFO: delete old files" >> $EXPIMPLOGFILE
-				rm $selectedtablesforexport
-				[ -e $exportedtables ] && rm $exportedtables
-				;;
-			1)
-				echo "INFO: exit because old run detected" >> $EXPIMPLOGFILE
-				exit 10
-				;;
-			# check ESC hit
-			255)	
-				echo "INFO: exit because old run (ESC hit)" >> $EXPIMPLOGFILE
-				exit 10
-				;;
-		esac
-	done
+	case $CONTINUE in
+		0)
+			echo "INFO: backup old files to $BACKUPDIR" >> $EXPIMPLOGFILE
+			if ! mkdir -p "$BACKUPDIR" || ! echo "$OLDRUNFILES" | while IFS= read -r OLDFILE; do cp -p "$OLDFILE" "$BACKUPDIR/" || exit 1; done
+			 then
+				echo "ERROR: backup of the previous run to $BACKUPDIR failed, nothing deleted" >> $EXPIMPLOGFILE
+				exit 15
+			fi
+			echo "INFO: delete old files" >> $EXPIMPLOGFILE
+			echo "$OLDRUNFILES" | while IFS= read -r OLDFILE; do rm -f "$OLDFILE"; done
+			;;
+		1)
+			echo "INFO: exit because old run detected" >> $EXPIMPLOGFILE
+			exit 10
+			;;
+		# check ESC hit
+		*)	
+			echo "INFO: exit because old run (ESC hit)" >> $EXPIMPLOGFILE
+			exit 10
+			;;
+	esac
 fi
  
 # search templates
@@ -69,12 +77,14 @@ dialog --title "$global_title" --backtitle "$global_backtitle" --separate-output
 if [ $? -ne 0 ]
  then
     echo "ERROR: fail to select templates for export" >> $EXPIMPLOGFILE
+	rm -f $selectedtablesforexport
 	exit 11
 fi 
 clear
 if [ $(cat $selectedtablesforexport | wc -l) -eq 0 ]
  then 
 	echo "ERROR: no template selected for export" >> $EXPIMPLOGFILE
+	rm -f $selectedtablesforexport
 	exit 12
 fi
 
@@ -90,16 +100,17 @@ echo "=== selected tables for export ===" >> $EXPIMPLOGFILE
 cat $selectedtablesforexport >> $EXPIMPLOGFILE
 echo "=== selected tables for export ===" >> $EXPIMPLOGFILE
 
-# delete old exports
-rm $EXPIMPLOC/*.tpl > /dev/null 2>&1
-rm $EXPIMPLOC/*.exp.log > /dev/null 2>&1
-rm $EXPIMPLOC/*.dat > /dev/null 2>&1
-
-# info file
-echo "# Template name | Return Code of Export" >> $exportedtables
+# info file (with metadata of the source system - checked by the import)
+echo "# Template name | Return Code of Export | SHA-256 of the data file" > $exportedtables
 echo "# =====================================" >> $exportedtables
 echo "# Exported to:" >> $exportedtables
 echo "# "$EXPIMPLOC >> $exportedtables
+echo "# =====================================" >> $exportedtables
+echo "# SID=$SAPSYSTEMNAME" >> $exportedtables
+echo "# HOST=$(hostname)" >> $exportedtables
+echo "# CLIENT=$EXPCLIENT" >> $exportedtables
+echo "# USER=$CURUSER" >> $exportedtables
+echo "# DATE=$(date "+%Y-%m-%d %H:%M:%S")" >> $exportedtables
 echo "# =====================================" >> $exportedtables
 
 # check STMS_QA export
@@ -126,7 +137,10 @@ do
  cat $global_pwd/templates/$SELTABLES >> $EXPIMPLOC/$SELTABLES.tpl
  echo "=== Export START" $SELTABLES "==="
  R3trans -w $EXPIMPLOC/$SELTABLES.exp.log $EXPIMPLOC/$SELTABLES.tpl
- echo $SELTABLES"|RC="$? >> $exportedtables
+ EXPRC=$?
+ EXPSHA256=""
+ [ -f "$EXPIMPLOC/$SELTABLES.dat" ] && EXPSHA256=$(expimp_sha256 "$EXPIMPLOC/$SELTABLES.dat")
+ echo "$SELTABLES|RC=$EXPRC|SHA256=$EXPSHA256" >> $exportedtables
  echo "=== Export END" $SELTABLES "==="
  echo ""
  sleep 1

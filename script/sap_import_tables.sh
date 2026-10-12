@@ -23,6 +23,10 @@
 # Version 1.8.9 - New Template OAC0-NOTOA01
 # Version 1.9   - PowerShell Port for Windows
 # Version 1.9.1 - Correct VSCAN Template
+# Version 1.10  - Security Hardening (permissions, checksums, target check, backup, user and config check)
+
+# helper functions (checksums, metadata)
+. "$(dirname "$0")/sap_expimp_lib.sh"
 
 # set config file and delete old one
 export exportedtables=$EXPIMPLOC/exported_tables.conf
@@ -106,6 +110,82 @@ if [ $OS == Linux ]
   sed 's/\"//g' $importtables >> $listcleaner
   mv $listcleaner $importtables
 fi
+
+# metadata of the source system (written by the export since version 1.10)
+EXPSID=$(expimp_meta $exportedtables SID)
+EXPHOST=$(expimp_meta $exportedtables HOST)
+EXPCLIENTINFO=$(expimp_meta $exportedtables CLIENT)
+EXPUSER=$(expimp_meta $exportedtables USER)
+EXPDATE=$(expimp_meta $exportedtables DATE)
+CURHOST=$(hostname)
+
+# verify the SHA-256 checksums of the selected exports
+echo "=== verify checksums ===" >> $EXPIMPLOGFILE
+CHECKSUMERROR=""
+while IFS= read -r SELTABLES
+do
+ EXPSHA256=$(awk -F'|' -v t="$SELTABLES" '$1 == t { for (i = 2; i <= NF; i++) if ($i ~ /^SHA256=/) { sub(/^SHA256=/, "", $i); print $i } }' $exportedtablesok | tail -1)
+ if [ -z "$EXPSID" ]
+  then
+	# export of an older version without metadata and checksums
+	echo "$SELTABLES|NO CHECKSUM (export of an older version)" >> $EXPIMPLOGFILE
+ elif [ ! -f "$EXPIMPLOC/$SELTABLES.dat" ]
+  then
+	echo "$SELTABLES|ERROR data file missing" >> $EXPIMPLOGFILE
+	CHECKSUMERROR="$CHECKSUMERROR $SELTABLES"
+ elif [ -z "$EXPSHA256" ] || [ "$(expimp_sha256 "$EXPIMPLOC/$SELTABLES.dat")" != "$EXPSHA256" ]
+  then
+	echo "$SELTABLES|ERROR checksum mismatch" >> $EXPIMPLOGFILE
+	CHECKSUMERROR="$CHECKSUMERROR $SELTABLES"
+ else
+	echo "$SELTABLES|checksum OK" >> $EXPIMPLOGFILE
+ fi
+done < $importtables
+echo "=== verify checksums ===" >> $EXPIMPLOGFILE
+if [ -n "$CHECKSUMERROR" ]
+ then
+	echo "ERROR: checksum verification failed:$CHECKSUMERROR" >> $EXPIMPLOGFILE
+	dialog --title "$global_title" --backtitle "$global_backtitle" --ok-label "EXIT" --msgbox "Checksum verification FAILED - nothing was imported!\n\nThe data files of these exports are missing or were changed after the export:\n\n$CHECKSUMERROR\n\nDetails can be found in $EXPIMPLOGFILE" $global_height $global_width
+	clear
+	exit 27
+fi
+
+# confirm the import (show source and target system)
+IMPORTWARNING=""
+CONFIRMSID=no
+if [ -z "$EXPSID" ]
+ then
+	IMPORTWARNING="$IMPORTWARNING\nWARNING: export of an older version without metadata and checksums,\n         the source system and the data files cannot be verified!\n"
+	CONFIRMSID=yes
+elif [ "$EXPSID" != "$SAPSYSTEMNAME" ]
+ then
+	IMPORTWARNING="$IMPORTWARNING\nWARNING: SAPSYSTEM MISMATCH - the export was created on $EXPSID!\n"
+	CONFIRMSID=yes
+fi
+if [ -n "$EXPHOST" ] && [ "$EXPHOST" != "$CURHOST" ]
+ then
+	IMPORTWARNING="$IMPORTWARNING\nINFO: the export was created on another host ($EXPHOST)\n"
+fi
+IMPORTLIST=$(tr '\n' ' ' < $importtables)
+dialog --title "$global_title" --backtitle "$global_backtitle" --defaultno --yes-label "Import" --no-label "Exit" --yesno "You are going to IMPORT into\n\n  SAPSYSTEM: $SAPSYSTEMNAME | HOST: $CURHOST\n\nThe export was created on\n\n  SAPSYSTEM: ${EXPSID:-unknown} | HOST: ${EXPHOST:-unknown} | CLIENT: ${EXPCLIENTINFO:-unknown}\n  USER: ${EXPUSER:-unknown} | DATE: ${EXPDATE:-unknown}\n$IMPORTWARNING\nSelected exports:\n$IMPORTLIST\n\nThe existing content of these tables will be DELETED and replaced!\n\nContinue with the import?" $global_height $global_width
+if [ $? -ne 0 ]
+ then
+	echo "INFO: import not confirmed" >> $EXPIMPLOGFILE
+	clear
+	exit 28
+fi
+if [ "$CONFIRMSID" = yes ]
+ then
+	TYPEDSID=$(dialog --title "$global_title" --backtitle "$global_backtitle" --inputbox "The source system of the export could not be verified!\n\nType the SID of this system ($SAPSYSTEMNAME) to confirm the import:" $global_height $global_width 2>&1 >/dev/tty)
+	if [ $? -ne 0 ] || [ "$TYPEDSID" != "$SAPSYSTEMNAME" ]
+	 then
+		echo "INFO: import not confirmed (SID not confirmed)" >> $EXPIMPLOGFILE
+		clear
+		exit 28
+	fi
+fi
+clear
+echo "INFO: import confirmed (source: SID=${EXPSID:-unknown} HOST=${EXPHOST:-unknown} DATE=${EXPDATE:-unknown})" >> $EXPIMPLOGFILE
 
 # export info file
 export importedtables=$EXPIMPLOC/imported_tables.conf
