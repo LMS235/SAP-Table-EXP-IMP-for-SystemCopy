@@ -1,4 +1,6 @@
 #!/bin/bash
+# global_* variables are exported by sap_tab_exp_imp.sh
+# shellcheck disable=SC2154
 # SAP(R) Table EXP/IMP for SystemCopy (c) Florian Lamml 2026
 # www.florian-lamml.de
 # helper functions (shared by main / export / import script)
@@ -130,4 +132,63 @@ expimp_progress_bar() {
  [ "$total" -gt 0 ] || total=1
  fill=$((cur * width / total))
  printf '[%s%s] %d/%d (%d%%)' "$(printf '%*s' "$fill" '' | tr ' ' '#')" "$(printf '%*s' $((width - fill)) '' | tr ' ' '.')" "$cur" "$total" $((cur * 100 / total))
+}
+
+# progress box that survives a resize of the terminal (a running "dialog --progressbox"
+# is not redrawn by some dialog versions after the terminal was made smaller / bigger)
+# - the input is shown with "dialog --infobox" (the last lines that fit into the box)
+# - redrawn for every new line and every second if the size of the terminal changed
+# - the input is always read completely (R3trans is never ended by a broken pipe)
+expimp_progressbox() {
+ local text=$1 line partial eof redraw lastsize drawsize max start i out
+ local -a lines=()
+ partial=""
+ eof=no
+ lastsize=""
+ while [ "$eof" = no ]
+ do
+  redraw=no
+  line=""
+  if IFS= read -r -t 1 line
+   then
+	lines+=("$partial$line")
+	partial=""
+	redraw=yes
+  elif [ $? -gt 128 ]
+   then
+	# timeout: keep a partly read line for the next read
+	partial+=$line
+  else
+	# end of input (a last line without newline is shown too)
+	[ -n "$partial$line" ] && lines+=("$partial$line")
+	eof=yes
+	redraw=yes
+  fi
+  # keep only the last 200 lines
+  [ "${#lines[@]}" -gt 200 ] && lines=("${lines[@]:$((${#lines[@]} - 200))}")
+  expimp_dialog_size
+  drawsize="$DLGH $DLGW"
+  if [ "$drawsize" != "$lastsize" ]
+   then
+	redraw=yes
+	clear > /dev/tty
+  fi
+  [ "$redraw" = yes ] || continue
+  max=$((DLGH - 4))
+  [ "$max" -lt 1 ] && max=1
+  start=$((${#lines[@]} - max))
+  [ "$start" -lt 0 ] && start=0
+  out="$text"$'\n'"$(printf '%*s' $((DLGW - 4)) '' | tr ' ' '-')"
+  for ((i = start; i < ${#lines[@]}; i++))
+  do
+   out+=$'\n'"${lines[$i]:0:$((DLGW - 4))}"
+  done
+  # if dialog fails (terminal too small), it is drawn again with the next size check
+  if dialog --title "$global_title" --backtitle "$global_backtitle" --no-collapse --no-nl-expand --infobox "$out" "$DLGH" "$DLGW" > /dev/tty 2>/dev/null
+   then
+	lastsize=$drawsize
+  else
+	lastsize=""
+  fi
+ done
 }

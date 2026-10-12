@@ -161,7 +161,7 @@ fi
 
 # export and export dialog (with progress: number of the template / number of templates)
 EXPTOTAL=$(grep -c . "$selectedtablesforexport")
-expimp_dialog --title "$global_title" --backtitle "$global_backtitle" --progressbox "Export SAP Tables ($EXPTOTAL templates)" @H@ @W@ < <(
+expimp_progressbox "Export SAP Tables ($EXPTOTAL templates)" < <(
 EXPNR=0
 while IFS= read -r SELTABLES
 do
@@ -194,7 +194,6 @@ do
  sleep 1
 done < "$selectedtablesforexport"
 echo "# =====================================" >> "$exportedtables"
-clear
 )
 
 # logfile info

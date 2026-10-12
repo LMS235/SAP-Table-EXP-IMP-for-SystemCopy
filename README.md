@@ -72,7 +72,7 @@ Both main scripts have the same config options at the top:
 | `EXPCLIENT` | `ALL`, `DEFAULT` or a 3-digit client number, default `ALL` |
 | `PARALLEL` | R3trans parallel parameter (SAP note 1127194), `0` or a positive number, default `0` |
 | `BACKUPKEEP` | number of backups of previous runs to keep in `EXPIMPLOC/backup`, `0` = unlimited, default `0` |
-| `EXPIMPPERM` | Unix only: `OPEN` (files `666`, directories `777`, no checks) or `STRICT` (files `660`, directories `770`, checks), default `OPEN` |
+| `EXPIMPPERM` | Unix only: `STRICT` (files `660`, directories `770`, checks) or `OPEN` (files `666`, directories `777`, no checks), default `STRICT` |
 | `EXPIMPGROUP` | Windows only: group with access to `EXPIMPLOC` (e.g. other `<sid>adm` users), default `SAP_LocalAdmin` |
 
 Invalid values stop the script with exit code 91.
@@ -85,11 +85,11 @@ Invalid values stop the script with exit code 91.
 
 * The script must be run as `<sid>adm` (not as `root` / built-in Administrator / system account).
 * Unix: the permissions are set by `EXPIMPPERM` (see Config):
-  * `OPEN` (default): files `666`, directories `777`, no permission checks - works always,
-    e.g. on NFS v3 shares with different UIDs / GIDs.
-  * `STRICT`: files `660`, directories `770` (`umask 007`), so the export and the import can be run
-    by different `<sid>adm` users of the same group (`sapsys`), but nobody else has access.
+  * `STRICT` (default): files `660`, directories `770` (`umask 007`), so the export and the import
+    can be run by different `<sid>adm` users of the same group (`sapsys`), but nobody else has access.
     The script stops if `EXPIMPLOC` contains files of another group or files writable by others.
+  * `OPEN`: files `666`, directories `777`, no permission checks - e.g. for NFS v3 shares with
+    different UIDs / GIDs on the hosts.
   * An existing directory `EXPIMPLOC` may belong to another user / group, it only has to be
     writable for `<sid>adm`.
 * Windows: `EXPIMPLOC` gets its own permissions without inheritance: full control for the current user,

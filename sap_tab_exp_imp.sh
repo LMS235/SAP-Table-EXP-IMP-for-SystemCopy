@@ -50,18 +50,18 @@ export BACKUPKEEP=0
 ###########################################
 
 ##### CONFIG PERMISSIONS ##################
-# OPEN   = files 666, directories 777, no
-#          permission checks (works always,
-#          e.g. on NFS v3 shares)
 # STRICT = files 660, directories 770
 #          (only <sid>adm users of the same
 #          group), stop if EXPIMPLOC contains
 #          files of another group or files
 #          writable by others
+# OPEN   = files 666, directories 777, no
+#          permission checks (e.g. NFS v3
+#          shares with different UIDs / GIDs)
 # the import always verifies the SHA-256
 # checksums of the data files
-# Default Value = OPEN
-export EXPIMPPERM=OPEN
+# Default Value = STRICT
+export EXPIMPPERM=STRICT
 ###########################################
 
 ##### info ################################

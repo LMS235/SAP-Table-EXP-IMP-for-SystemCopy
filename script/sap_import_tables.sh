@@ -232,7 +232,7 @@ importedtables=$IMPSRC/imported_tables.conf
 
 # import tables (with progress: number of the export / number of exports)
 IMPTOTAL=$(grep -c . "$importtables")
-expimp_dialog --title "$global_title" --backtitle "$global_backtitle" --progressbox "Import selected tables ($IMPTOTAL exports)" @H@ @W@ < <(
+expimp_progressbox "Import selected tables ($IMPTOTAL exports)" < <(
 IMPNR=0
 while IFS= read -r SELTABLES
 do
@@ -248,7 +248,6 @@ do
  sleep 1
 done < "$importtables"
 echo "# =====================================" >> "$importedtables"
-clear
 )
 
 # logfile info
