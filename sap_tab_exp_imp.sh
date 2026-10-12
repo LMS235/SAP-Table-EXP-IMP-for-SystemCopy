@@ -96,13 +96,13 @@ export EXPIMPPERM=STRICT
 # 94 - cannot create / secure export location (writable / group / permissions)
 # 93 - no SHA-256 tool found (sha256sum, shasum, csum or openssl)
 # 92 - user is not <sid>adm
-# 90 - export / import script started directly (not by sap_tab_exp_imp.sh)
 # 91 - invalid config value (EXPIMPLOC, ADDSIDTOEXPIMP, EXPCLIENT, PARALLEL, BACKUPKEEP, EXPIMPPERM)
+# 90 - export / import script started directly (not by sap_tab_exp_imp.sh)
 # export
 # 10 - exit because old run detected
 # 11 - fail to select templates for export
 # 12 - no template selected for export
-# 13 - error while export
+# 13 - error while export (R3trans RC >= 8 or template missing)
 # 14 - export info error
 # 15 - backup of the previous run failed
 # import
@@ -111,7 +111,7 @@ export EXPIMPPERM=STRICT
 # 22 - no OK exports found for import
 # 23 - import select error
 # 24 - no exports selected for import
-# 25 - error while import
+# 25 - error while import (R3trans RC >= 8)
 # 26 - import info error
 # 27 - checksum verification failed
 # 28 - import not confirmed

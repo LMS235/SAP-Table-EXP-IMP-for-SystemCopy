@@ -4,6 +4,21 @@ SAP&trade; Table EXP/IMP for SystemCopy &copy; Florian Lamml 2026
 
 A simple script for exporting and importing SAP tables during a system copy.
 
+## What's new in version 2.0
+
+* **Security:** run only as `<sid>adm`, checked config values, protected export location
+  (`EXPIMPPERM`, Windows permissions), SHA-256 checksums of the data files, confirmation of the
+  import with the source system of the export (see [Security](#security))
+* **Data:** backup of the previous run before every new export (`BACKUPKEEP`), import from the
+  current export or a backup, the import can be repeated (data files are never deleted),
+  `ADDSIDTOEXPIMP`
+* **Errors:** a failed R3trans run (RC >= 8) or a missing template ends with RC 13 / 25 and is
+  shown in the summary, empty templates are marked and skipped, the checksum check shows the
+  reason for every table
+* **Usability:** progress bar ("Export 5/10"), the dialogs fit into the terminal and survive a
+  resize of the window (also older `dialog` versions), the R3trans output is shown in the progress
+  box, Cancel can be selected with `TAB` (Windows)
+
 <img width="711" height="519" alt="SAP-Table-EXP-IMP-for-SystemCopy" src="https://github.com/user-attachments/assets/13697342-5638-4b1c-a334-342589b8a43d" />
 
 ## Unix / Linux / AIX
@@ -17,10 +32,17 @@ A simple script for exporting and importing SAP tables during a system copy.
 Needs the `dialog` command (a prebuilt `dialog` for AIX is included in `dialogaix`)
 and a tool for SHA-256 checksums (`sha256sum`, `shasum`, `csum` or `openssl`).
 
+The script can be started from any directory (`/path/to/sap_tab_exp_imp.sh`). The dialogs use
+at most 45 x 80 characters and are limited to the size of the terminal; the ASCII art of the
+start dialog is only shown if the terminal is high enough.
+
+> [!NOTE]
+> Version 2.0 was tested on Linux (SLES for SAP 15 SP7, `dialog` 1.3), not yet on AIX.
+
 ## Windows
 
 > [!NOTE]
-> Version 1.10 of the Windows version was tested on Windows with Windows PowerShell 5.1.
+> Version 2.0 of the Windows version was tested on Windows with Windows PowerShell 5.1.
 > Not tested yet: a UNC path as `EXPIMPLOC`, a missing access group (`EXPIMPGROUP`) and an
 > `EXPIMPLOC` that belongs to another user.
 
@@ -85,6 +107,10 @@ Both main scripts have the same config options at the top:
 
 Invalid values stop the script with exit code 91.
 
+Windows: text values must be in quotes (e.g. `$EXPCLIENT = '100'`), `PARALLEL` and `BACKUPKEEP`
+must be digits only (PowerShell would read e.g. `0x10` as 16) - an error in the config block also
+ends the script with exit code 91.
+
 > [!NOTE]
 > To import the export of **another** system from a shared location (e.g. export as `tstadm`,
 > import as `prdadm`), set `EXPIMPLOC` of the importing system to the directory of the export
@@ -127,6 +153,21 @@ Invalid values stop the script with exit code 91.
 * The data files are never deleted after an import (they can be imported several times or into
   several systems) - delete `EXPIMPLOC` manually when it is no longer needed.
 
+## Export / import
+
+* **Export:** select the templates (empty templates are marked with `(empty)`), the progress box
+  shows "Export 5/10: NAME", the R3trans output, the return code and a progress bar
+  `[##########..........] 5/10 (50%)`. The overview shows every template with its return code
+  and checksum (`NAME|RC=0|SHA256=...`).
+* **Import:** select the export (current export or a backup), select the exports (only exports
+  with RC 0 or 4 are offered), checksum check, confirmation, progress box like the export.
+* **Return codes:** RC 0 and 4 of R3trans are OK, RC >= 8 is an error (exit code 13 / 25 and a hint
+  in the summary). A table that does not exist in the system is only a warning of R3trans (RC 0),
+  so templates can contain tables of different SAP releases.
+* **Files** in `EXPIMPLOC`: `<template>.tpl` (R3trans control file), `<template>.dat` (data),
+  `<template>.exp.log` / `.imp.log` (R3trans logs), `exported_tables.conf` / `imported_tables.conf`
+  (overview), `EXP_IMP_LOG_<date>.txt` (log of the tool), `backup/<timestamp>/` (previous runs).
+
 ## Exit codes
 
 | Code | Description |
@@ -139,12 +180,12 @@ Invalid values stop the script with exit code 91.
 | 94 | cannot create the export location / not writable (Unix `STRICT`: files of another group / writable by others) |
 | 93 | no SHA-256 tool found (Unix only) |
 | 92 | user is not `<sid>adm` |
+| 91 | invalid config value (`EXPIMPLOC`, `ADDSIDTOEXPIMP`, `EXPCLIENT`, `PARALLEL`, `BACKUPKEEP`, `EXPIMPPERM`) / Windows: error in the config block |
 | 90 | export / import script started directly (must be started by the main script) |
-| 91 | invalid config value (`EXPIMPLOC`, `ADDSIDTOEXPIMP`, `EXPCLIENT`, `PARALLEL`, `BACKUPKEEP`, `EXPIMPPERM`) |
 | 10 | export: exit because old run detected |
 | 11 | export: fail to select templates for export |
 | 12 | export: no template selected for export |
-| 13 | export: error while export (R3trans RC >= 8 or template missing) |
+| 13 | export: error while export (R3trans RC >= 8 or template missing; Windows: also an unexpected error) |
 | 14 | export: export info error |
 | 15 | export: backup of the previous run failed |
 | 20 | import: no exports found for import |
@@ -152,9 +193,9 @@ Invalid values stop the script with exit code 91.
 | 22 | import: no OK exports found for import |
 | 23 | import: import select error |
 | 24 | import: no exports selected for import |
-| 25 | import: error while import (R3trans RC >= 8) |
+| 25 | import: error while import (R3trans RC >= 8; Windows: also an unexpected error) |
 | 26 | import: import info error |
-| 27 | import: checksum verification failed |
+| 27 | import: checksum verification failed (data file missing or changed, nothing was imported) |
 | 28 | import: import not confirmed |
 | 29 | import: no export selected for import (current export / backup) |
 

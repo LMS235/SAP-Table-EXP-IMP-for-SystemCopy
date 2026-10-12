@@ -94,13 +94,13 @@ $EXPIMPGROUP = 'SAP_LocalAdmin'
 # 95 - cannot find R3trans.exe
 # 94 - cannot create export location / location not writable
 # 92 - user is not <sid>adm
+# 91 - invalid config value (EXPIMPLOC, ADDSIDTOEXPIMP, EXPCLIENT, PARALLEL, BACKUPKEEP) or error in the config block
 # 90 - export / import script started directly (not by sap_tab_exp_imp.ps1)
-# 91 - invalid config value (EXPIMPLOC, ADDSIDTOEXPIMP, EXPCLIENT, PARALLEL, BACKUPKEEP)
 # export
 # 10 - exit because old run detected
 # 11 - fail to select templates for export
 # 12 - no template selected for export
-# 13 - error while export
+# 13 - error while export (R3trans RC >= 8, template missing or unexpected error)
 # 14 - export info error
 # 15 - backup of the previous run failed
 # import
@@ -109,7 +109,7 @@ $EXPIMPGROUP = 'SAP_LocalAdmin'
 # 22 - no OK exports found for import
 # 23 - import select error
 # 24 - no exports selected for import
-# 25 - error while import
+# 25 - error while import (R3trans RC >= 8 or unexpected error)
 # 26 - import info error
 # 27 - checksum verification failed
 # 28 - import not confirmed
