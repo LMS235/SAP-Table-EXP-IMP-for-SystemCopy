@@ -70,7 +70,7 @@ $EXPIMPGROUP = 'SAP_LocalAdmin'
 # 97 - cannot start the console UI
 # 96 - Hit ESC
 # 95 - cannot find R3trans.exe
-# 94 - cannot create / secure export location (permissions)
+# 94 - cannot create export location / location not writable
 # 92 - user is not <sid>adm
 # 91 - invalid config value (EXPIMPLOC, EXPCLIENT, PARALLEL)
 # export
@@ -90,6 +90,7 @@ $EXPIMPGROUP = 'SAP_LocalAdmin'
 # 26 - import info error
 # 27 - checksum verification failed
 # 28 - import not confirmed
+# 29 - no export selected for import
 ###########################################
 
 $ErrorActionPreference = 'Stop'
@@ -196,11 +197,20 @@ try {
     Write-Host '... EXIT NOW'
     exit 94
 }
-$aclWarning = Protect-ExpImpLocation -Path $Global:EXPIMPLOC -Group $EXPIMPGROUP
-if ($aclWarning -eq 'ERROR') {
-    Write-Host "cannot set permissions of $($Global:EXPIMPLOC)"
+# the directory EXPIMPLOC may belong to another user (if it already exists), it only has
+# to be writable for <sid>adm - if the permissions cannot be set, only a warning is written
+try {
+    $writetest = Join-Path $Global:EXPIMPLOC ('writetest_' + [guid]::NewGuid().ToString('N') + '.tmp')
+    [System.IO.File]::WriteAllText($writetest, 'test')
+    Remove-Item -LiteralPath $writetest -Force
+} catch {
+    Write-Host "$($Global:EXPIMPLOC) is not writable for $($Global:CURUSER)!"
     Write-Host '... EXIT NOW'
     exit 94
+}
+$aclWarning = Protect-ExpImpLocation -Path $Global:EXPIMPLOC -Group $EXPIMPGROUP
+if ($aclWarning -eq 'ERROR') {
+    $aclWarning = "cannot set the permissions of $($Global:EXPIMPLOC) - please check them manually"
 }
 
 # set logfile

@@ -28,21 +28,61 @@
 # helper functions (checksums, metadata)
 . "$(dirname "$0")/sap_expimp_lib.sh"
 
-# set config file and delete old one
-export exportedtables=$EXPIMPLOC/exported_tables.conf
-if [ $(cat $exportedtables | wc -l) -eq 0 ]
+# exports available for import: the current export and the backups of previous runs
+# (newest first - the backup directories are named by timestamp)
+IMPSRCDIRS=()
+[ -s "$EXPIMPLOC/exported_tables.conf" ] && IMPSRCDIRS+=("$EXPIMPLOC")
+BACKUPDIRS=()
+for BACKUPDIR in "$EXPIMPLOC"/backup/*
+do
+ [ -s "$BACKUPDIR/exported_tables.conf" ] && BACKUPDIRS=("$BACKUPDIR" "${BACKUPDIRS[@]}")
+done
+IMPSRCDIRS+=("${BACKUPDIRS[@]}")
+if [ ${#IMPSRCDIRS[@]} -eq 0 ]
  then 
 	echo "ERROR: no exports found for import" >> $EXPIMPLOGFILE
 	exit 20
 fi
 
+# select the export to import if there is more than one (default is the newest)
+IMPSRC=${IMPSRCDIRS[0]}
+if [ ${#IMPSRCDIRS[@]} -gt 1 ]
+ then
+	IMPSRCLIST=()
+	IMPSRCNR=0
+	for IMPSRCDIR in "${IMPSRCDIRS[@]}"
+	do
+	 IMPSRCNR=$((IMPSRCNR + 1))
+	 if [ "$IMPSRCDIR" = "$EXPIMPLOC" ]; then IMPSRCNAME="current"; else IMPSRCNAME="backup/${IMPSRCDIR##*/}"; fi
+	 IMPSRCDATE=$(expimp_meta "$IMPSRCDIR/exported_tables.conf" DATE)
+	 IMPSRCSID=$(expimp_meta "$IMPSRCDIR/exported_tables.conf" SID)
+	 IMPSRCCOUNT=$(grep -c '|RC=' "$IMPSRCDIR/exported_tables.conf")
+	 [ $IMPSRCNR -eq 1 ] && IMPSRCSTATE=on || IMPSRCSTATE=off
+	 IMPSRCLIST+=("$IMPSRCNR" "$IMPSRCNAME | ${IMPSRCDATE:-unknown date} | SID ${IMPSRCSID:-unknown} | $IMPSRCCOUNT exports" "$IMPSRCSTATE")
+	done
+	IMPSRCNR=$(dialog --title "$global_title" --backtitle "$global_backtitle" --radiolist "Select the export to import (default is the newest):" $global_height $global_width $global_list "${IMPSRCLIST[@]}" 2>&1 >/dev/tty)
+	if [ $? -ne 0 ]
+	 then
+		echo "INFO: no export selected for import" >> $EXPIMPLOGFILE
+		clear
+		exit 29
+	fi
+	clear
+	IMPSRCNR=$(echo "$IMPSRCNR" | tr -d '"')
+	IMPSRC=${IMPSRCDIRS[$((IMPSRCNR - 1))]}
+fi
+echo "INFO: import from $IMPSRC" >> $EXPIMPLOGFILE
+
 # set config file
-export exportedtablesok=$EXPIMPLOC/exported_tables_ok.conf
+export exportedtables=$IMPSRC/exported_tables.conf
+
+# set config file
+export exportedtablesok=$IMPSRC/exported_tables_ok.conf
 
 # check existing data
 if [ -e $exportedtablesok ]
  then
-	dialog --title "$global_title" --backtitle "$global_backtitle"  --yes-label "Continue" --no-label "Exit" --yesno  "There are import files in $EXPIMPLOC\nIf you continue these files will be deleted!" $global_height $global_width 
+	dialog --title "$global_title" --backtitle "$global_backtitle"  --yes-label "Continue" --no-label "Exit" --yesno  "There are import files in $IMPSRC\nIf you continue these files will be deleted!" $global_height $global_width 
 	CONTINUE=$?
 	for choice in $CONTINUE
 	do
@@ -65,7 +105,7 @@ if [ -e $exportedtablesok ]
 fi
 
 # build list of OK exports for import
-export templist=$EXPIMPLOC/templist.conf
+export templist=$IMPSRC/templist.conf
 [ -e $templist ] && rm $templist
 cat $exportedtables | sed -ne '/^[^#].*/p' >> $templist
 cat $templist | grep RC=0 >> $exportedtablesok 
@@ -78,7 +118,7 @@ if [ $(cat $exportedtablesok | wc -l) -eq 0 ]
 fi
 
 # set config file and delete old one
-export importtables=$EXPIMPLOC/selected_tables_import.conf
+export importtables=$IMPSRC/selected_tables_import.conf
 [ -e $importtables ] && rm $importtables
 
 # select exports to import
@@ -106,7 +146,7 @@ fi
 
 if [ $OS == Linux ]
  then
-  export listcleaner=$EXPIMPLOC/listcleaner.conf
+  export listcleaner=$IMPSRC/listcleaner.conf
   sed 's/\"//g' $importtables >> $listcleaner
   mv $listcleaner $importtables
 fi
@@ -129,11 +169,11 @@ do
   then
 	# export of an older version without metadata and checksums
 	echo "$SELTABLES|NO CHECKSUM (export of an older version)" >> $EXPIMPLOGFILE
- elif [ ! -f "$EXPIMPLOC/$SELTABLES.dat" ]
+ elif [ ! -f "$IMPSRC/$SELTABLES.dat" ]
   then
 	echo "$SELTABLES|ERROR data file missing" >> $EXPIMPLOGFILE
 	CHECKSUMERROR="$CHECKSUMERROR $SELTABLES"
- elif [ -z "$EXPSHA256" ] || [ "$(expimp_sha256 "$EXPIMPLOC/$SELTABLES.dat")" != "$EXPSHA256" ]
+ elif [ -z "$EXPSHA256" ] || [ "$(expimp_sha256 "$IMPSRC/$SELTABLES.dat")" != "$EXPSHA256" ]
   then
 	echo "$SELTABLES|ERROR checksum mismatch" >> $EXPIMPLOGFILE
 	CHECKSUMERROR="$CHECKSUMERROR $SELTABLES"
@@ -167,7 +207,7 @@ if [ -n "$EXPHOST" ] && [ "$EXPHOST" != "$CURHOST" ]
 	IMPORTWARNING="$IMPORTWARNING\nINFO: the export was created on another host ($EXPHOST)\n"
 fi
 IMPORTLIST=$(tr '\n' ' ' < $importtables)
-dialog --title "$global_title" --backtitle "$global_backtitle" --defaultno --yes-label "Import" --no-label "Exit" --yesno "You are going to IMPORT into\n\n  SAPSYSTEM: $SAPSYSTEMNAME | HOST: $CURHOST\n\nThe export was created on\n\n  SAPSYSTEM: ${EXPSID:-unknown} | HOST: ${EXPHOST:-unknown} | CLIENT: ${EXPCLIENTINFO:-unknown}\n  USER: ${EXPUSER:-unknown} | DATE: ${EXPDATE:-unknown}\n$IMPORTWARNING\nSelected exports:\n$IMPORTLIST\n\nThe existing content of these tables will be DELETED and replaced!\n\nContinue with the import?" $global_height $global_width
+dialog --title "$global_title" --backtitle "$global_backtitle" --defaultno --yes-label "Import" --no-label "Exit" --yesno "Export: $IMPSRC\n\nYou are going to IMPORT into\n\n  SAPSYSTEM: $SAPSYSTEMNAME | HOST: $CURHOST\n\nThe export was created on\n\n  SAPSYSTEM: ${EXPSID:-unknown} | HOST: ${EXPHOST:-unknown} | CLIENT: ${EXPCLIENTINFO:-unknown}\n  USER: ${EXPUSER:-unknown} | DATE: ${EXPDATE:-unknown}\n$IMPORTWARNING\nSelected exports:\n$IMPORTLIST\n\nThe existing content of these tables will be DELETED and replaced!\n\nContinue with the import?" $global_height $global_width
 if [ $? -ne 0 ]
  then
 	echo "INFO: import not confirmed" >> $EXPIMPLOGFILE
@@ -188,14 +228,14 @@ clear
 echo "INFO: import confirmed (source: SID=${EXPSID:-unknown} HOST=${EXPHOST:-unknown} DATE=${EXPDATE:-unknown})" >> $EXPIMPLOGFILE
 
 # export info file
-export importedtables=$EXPIMPLOC/imported_tables.conf
+export importedtables=$IMPSRC/imported_tables.conf
 [ -e $importedtables ] && rm $importedtables
 
 # info file
 echo "# Template name | Return Code of Import" >> $importedtables
 echo "# =====================================" >> $importedtables
 echo "# Imported from:" >> $importedtables
-echo "# "$EXPIMPLOC >> $importedtables
+echo "# "$IMPSRC >> $importedtables
 echo "# =====================================" >> $importedtables
 
 # import tables
@@ -203,7 +243,7 @@ dialog --title "$global_title" --backtitle "$global_backtitle" --progressbox "Im
 while read SELTABLES
 do
  echo "=== Import START" $SELTABLES "==="
- R3trans -w $EXPIMPLOC/$SELTABLES.imp.log -i $EXPIMPLOC/$SELTABLES.dat
+ R3trans -w $IMPSRC/$SELTABLES.imp.log -i $IMPSRC/$SELTABLES.dat
  echo $SELTABLES"|RC="$? >> $importedtables
  echo "=== Import END" $SELTABLES "==="
  echo ""

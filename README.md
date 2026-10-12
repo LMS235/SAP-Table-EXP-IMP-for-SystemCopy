@@ -64,13 +64,14 @@ Keys in the console UI:
 
 ## Config
 
-Both main scripts have the same three config options at the top:
+Both main scripts have the same config options at the top:
 
 | Option | Description |
 | --- | --- |
 | `EXPIMPLOC` | export / import location (absolute path), default `<script dir>/expimp/<SID>` |
 | `EXPCLIENT` | `ALL`, `DEFAULT` or a 3-digit client number, default `ALL` |
 | `PARALLEL` | R3trans parallel parameter (SAP note 1127194), `0` or a positive number, default `0` |
+| `EXPIMPPERM` | Unix only: `OPEN` (files `666`, directories `777`, no checks) or `STRICT` (files `660`, directories `770`, checks), default `OPEN` |
 | `EXPIMPGROUP` | Windows only: group with access to `EXPIMPLOC` (e.g. other `<sid>adm` users), default `SAP_LocalAdmin` |
 
 Invalid values stop the script with exit code 91.
@@ -82,11 +83,17 @@ Invalid values stop the script with exit code 91.
 > the secure storage (`SECSTORE`), RFC destinations (`SM59`), OAuth, LDAP and SAML2 configuration.
 
 * The script must be run as `<sid>adm` (not as `root` / built-in Administrator / system account).
-* Unix: all files and directories are created with `umask 007` (files `660`, directories `770`),
-  so the export and the import can be run by different `<sid>adm` users of the same group (`sapsys`).
-  The script stops if `EXPIMPLOC` contains files of another group or files writable by others.
+* Unix: the permissions are set by `EXPIMPPERM` (see Config):
+  * `OPEN` (default): files `666`, directories `777`, no permission checks - works always,
+    e.g. on NFS v3 shares with different UIDs / GIDs.
+  * `STRICT`: files `660`, directories `770` (`umask 007`), so the export and the import can be run
+    by different `<sid>adm` users of the same group (`sapsys`), but nobody else has access.
+    The script stops if `EXPIMPLOC` contains files of another group or files writable by others.
+  * An existing directory `EXPIMPLOC` may belong to another user / group, it only has to be
+    writable for `<sid>adm`.
 * Windows: `EXPIMPLOC` gets its own permissions without inheritance: full control for the current user,
-  Administrators and SYSTEM, modify for `EXPIMPGROUP`.
+  Administrators and SYSTEM, modify for `EXPIMPGROUP`. If the permissions cannot be set (e.g. the
+  directory belongs to another user), only a warning is shown - `EXPIMPLOC` only has to be writable.
 * Every export writes the SHA-256 checksum of each data file and the source system
   (SID, host, client, user, date) into `exported_tables.conf`.
 * Before the import the checksums are verified (exit code 27 if a data file is missing or was changed)
@@ -95,6 +102,9 @@ Invalid values stop the script with exit code 91.
   current system has to be typed in to confirm the import.
 * Before a new export, the files of the previous run are copied to `EXPIMPLOC/backup/<timestamp>`
   and only then deleted. Backups are never deleted by the script.
+* If there are several exports (the current export and backups of previous runs), the export to
+  import can be selected (default is the newest). The import reads the data from the selected
+  directory and writes its own files (`*.imp.log`, `imported_tables.conf`, ...) into it.
 * The data files are never deleted after an import (they can be imported several times or into
   several systems) - delete `EXPIMPLOC` manually when it is no longer needed.
 
@@ -107,10 +117,10 @@ Invalid values stop the script with exit code 91.
 | 97 | cannot start `dialog` (Unix) / the console UI (Windows) |
 | 96 | hit ESC |
 | 95 | cannot find `R3trans.exe` (Windows only) |
-| 94 | cannot create / secure the export location (group / permissions) |
+| 94 | cannot create the export location / not writable (Unix `STRICT`: files of another group / writable by others) |
 | 93 | no SHA-256 tool found (Unix only) |
 | 92 | user is not `<sid>adm` |
-| 91 | invalid config value (`EXPIMPLOC`, `EXPCLIENT`, `PARALLEL`) |
+| 91 | invalid config value (`EXPIMPLOC`, `EXPCLIENT`, `PARALLEL`, `EXPIMPPERM`) |
 | 10 | export: exit because old run detected |
 | 11 | export: fail to select templates for export |
 | 12 | export: no template selected for export |
@@ -126,5 +136,6 @@ Invalid values stop the script with exit code 91.
 | 26 | import: import info error |
 | 27 | import: checksum verification failed |
 | 28 | import: import not confirmed |
+| 29 | import: no export selected for import (current export / backup) |
 
 Website: www.florian-lamml.de

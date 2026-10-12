@@ -40,6 +40,21 @@ export EXPCLIENT=ALL
 export PARALLEL=0
 ###########################################
 
+##### CONFIG PERMISSIONS ##################
+# OPEN   = files 666, directories 777, no
+#          permission checks (works always,
+#          e.g. on NFS v3 shares)
+# STRICT = files 660, directories 770
+#          (only <sid>adm users of the same
+#          group), stop if EXPIMPLOC contains
+#          files of another group or files
+#          writable by others
+# the import always verifies the SHA-256
+# checksums of the data files
+# Default Value = OPEN
+export EXPIMPPERM=OPEN
+###########################################
+
 ##### info ################################
 # with this tool you can export and import
 # tables from and into a sap system
@@ -59,10 +74,10 @@ export PARALLEL=0
 # 98 - cannot find SAP SID
 # 97 - cannot start dialog
 # 96 - Hit ESC
-# 94 - cannot create / secure export location (owner / permissions)
+# 94 - cannot create / secure export location (writable / group / permissions)
 # 93 - no SHA-256 tool found (sha256sum, shasum, csum or openssl)
 # 92 - user is not <sid>adm
-# 91 - invalid config value (EXPIMPLOC, EXPCLIENT, PARALLEL)
+# 91 - invalid config value (EXPIMPLOC, EXPCLIENT, PARALLEL, EXPIMPPERM)
 # export
 # 10 - exit because old run detected
 # 11 - fail to select templates for export
@@ -80,6 +95,7 @@ export PARALLEL=0
 # 26 - import info error
 # 27 - checksum verification failed
 # 28 - import not confirmed
+# 29 - no export selected for import
 ###########################################
 
 # set global variables
@@ -91,10 +107,6 @@ export global_title="SAP Table EXP/IMP for SystemCopy (c) Florian Lamml 2026"
 export global_backtitle="SAP Table EXP/IMP for SystemCopy (c) Florian Lamml 2026"
 export global_copy="(c) Florian Lamml 2026"
 
-# the export files contain sensitive data (PSEs, secure storage, RFC destinations ...)
-# all files and directories created by this tool are only accessible by the owner and
-# the group (sapsys) - export and import can run as different <sid>adm users of the group
-umask 007
 
 # root check
 export CURUSER=$(id -un)
@@ -148,6 +160,23 @@ case "$PARALLEL" in
 esac
 export PARALLEL
 
+# check permission mode and set umask
+# the export files contain sensitive data (PSEs, secure storage, RFC destinations ...)
+# STRICT: all files and directories created by this tool are only accessible by the owner
+#         and the group (sapsys) - export and import can run as different <sid>adm users
+# OPEN:   files and directories are accessible by everyone (e.g. NFS v3 shares)
+EXPIMPPERM=$(echo "$EXPIMPPERM" | tr '[:lower:]' '[:upper:]')
+case "$EXPIMPPERM" in
+ STRICT) umask 007 ;;
+ OPEN)   umask 000 ;;
+ *)
+   echo "EXPIMPPERM '$EXPIMPPERM' is invalid (allowed: STRICT or OPEN)"
+   echo "... EXIT NOW"
+   exit 91
+   ;;
+esac
+export EXPIMPPERM
+
 # check export location
 if [ -z "$EXPIMPLOC" ]; 
  then 
@@ -173,6 +202,8 @@ case "$EXPIMPLOC" in
 esac
 
 # create export location and secure it (only users of the group of <sid>adm may read and write)
+# the directory EXPIMPLOC itself may belong to another user / group (if it already exists),
+# it only has to be writable for <sid>adm - all files and directories in it are checked
 CURGROUP=$(id -gn)
 if [ ! -d "$EXPIMPLOC" ] && ! mkdir -p "$EXPIMPLOC";
  then
@@ -180,25 +211,37 @@ if [ ! -d "$EXPIMPLOC" ] && ! mkdir -p "$EXPIMPLOC";
    echo "... EXIT NOW"
    exit 94
 fi
-FOREIGNFILE=$(find "$EXPIMPLOC" ! -group "$CURGROUP" 2>/dev/null | head -1)
-if [ -n "$FOREIGNFILE" ];
+if [ ! -w "$EXPIMPLOC" ] || [ ! -x "$EXPIMPLOC" ];
  then
-   echo "$EXPIMPLOC contains files not belonging to group $CURGROUP (e.g. $FOREIGNFILE)!"
+   echo "$EXPIMPLOC is not writable for $CURUSER!"
    echo "... EXIT NOW"
    exit 94
 fi
-if ! find "$EXPIMPLOC" -user "$CURUSER" | while IFS= read -r OWNFILE; do chmod g+rwX,o-rwx "$OWNFILE" || exit 1; done;
+if [ "$EXPIMPPERM" = OPEN ];
  then
-   echo "cannot set permissions in $EXPIMPLOC"
-   echo "... EXIT NOW"
-   exit 94
-fi
-FOREIGNFILE=$(find "$EXPIMPLOC" -perm -002 2>/dev/null | head -1)
-if [ -n "$FOREIGNFILE" ];
- then
-   echo "$EXPIMPLOC contains files writable by others (e.g. $FOREIGNFILE)!"
-   echo "... EXIT NOW"
-   exit 94
+   # open permissions for own files of previous runs, errors are ignored (e.g. NFS)
+   find "$EXPIMPLOC" -user "$CURUSER" | awk -v d="$EXPIMPLOC" '$0 != d' | while IFS= read -r OWNFILE; do chmod a+rwX "$OWNFILE" 2>/dev/null; done
+else
+   FOREIGNFILE=$(find "$EXPIMPLOC" ! -group "$CURGROUP" 2>/dev/null | awk -v d="$EXPIMPLOC" '$0 != d' | head -1)
+   if [ -n "$FOREIGNFILE" ];
+    then
+      echo "$EXPIMPLOC contains files not belonging to group $CURGROUP (e.g. $FOREIGNFILE)!"
+      echo "... EXIT NOW"
+      exit 94
+   fi
+   if ! find "$EXPIMPLOC" -user "$CURUSER" | awk -v d="$EXPIMPLOC" '$0 != d' | while IFS= read -r OWNFILE; do chmod g+rwX,o-rwx "$OWNFILE" || exit 1; done;
+    then
+      echo "cannot set permissions in $EXPIMPLOC"
+      echo "... EXIT NOW"
+      exit 94
+   fi
+   FOREIGNFILE=$(find "$EXPIMPLOC" -perm -002 2>/dev/null | awk -v d="$EXPIMPLOC" '$0 != d' | head -1)
+   if [ -n "$FOREIGNFILE" ];
+    then
+      echo "$EXPIMPLOC contains files writable by others (e.g. $FOREIGNFILE)!"
+      echo "... EXIT NOW"
+      exit 94
+   fi
 fi
 
 # set logfile
