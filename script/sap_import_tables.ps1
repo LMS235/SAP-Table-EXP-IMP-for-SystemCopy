@@ -247,12 +247,16 @@ Write-AsciiFile -Path $importedtables -Lines @(
 
 # import tables
 try {
-    Start-UiProgressView -Text 'Import selected tables'
+    # progress: number of the export / number of exports
+    $imptotal = $importlist.Count
+    $impnr    = 0
+    Start-UiProgressView -Text "Import selected tables ($imptotal exports)"
     foreach ($SELTABLES in $importlist) {
+        $impnr++
         $datfile = Join-Path $impsrc "$SELTABLES.dat"
         $logfile = Join-Path $impsrc "$SELTABLES.imp.log"
 
-        Write-Host "=== Import START $SELTABLES ===" -ForegroundColor Cyan
+        Write-Host "=== Import $impnr/$imptotal`: $SELTABLES ===" -ForegroundColor Cyan
         # R3trans writes warnings to stderr - '2>&1' would raise a terminating
         # error under $ErrorActionPreference = 'Stop' (Windows PowerShell 5.1)
         $prevEap = $ErrorActionPreference
@@ -264,7 +268,8 @@ try {
             $ErrorActionPreference = $prevEap
         }
         Add-Content -LiteralPath $importedtables -Value "$SELTABLES|RC=$rc" -Encoding ascii
-        Write-Host "=== Import END $SELTABLES ===" -ForegroundColor Cyan
+        Write-Host "=== Import END $SELTABLES (RC=$rc) ===" -ForegroundColor Cyan
+        Write-Host "=== $(Get-ExpImpProgressBar -Current $impnr -Total $imptotal) done ===" -ForegroundColor Green
         Write-Host ''
         Start-Sleep -Seconds 1
     }

@@ -230,15 +230,20 @@ importedtables=$IMPSRC/imported_tables.conf
  echo "# ====================================="
 } > "$importedtables"
 
-# import tables
-expimp_dialog --title "$global_title" --backtitle "$global_backtitle" --progressbox "Import selected tables" @H@ @W@ < <(
+# import tables (with progress: number of the export / number of exports)
+IMPTOTAL=$(grep -c . "$importtables")
+expimp_dialog --title "$global_title" --backtitle "$global_backtitle" --progressbox "Import selected tables ($IMPTOTAL exports)" @H@ @W@ < <(
+IMPNR=0
 while IFS= read -r SELTABLES
 do
- echo "=== Import START $SELTABLES ==="
+ IMPNR=$((IMPNR + 1))
+ echo "=== Import $IMPNR/$IMPTOTAL: $SELTABLES ==="
  # R3trans error output is shown in the progress box too
  R3trans -w "$IMPSRC/$SELTABLES.imp.log" -i "$IMPSRC/$SELTABLES.dat" 2>&1
- echo "$SELTABLES|RC=$?" >> "$importedtables"
- echo "=== Import END $SELTABLES ==="
+ IMPRC=$?
+ echo "$SELTABLES|RC=$IMPRC" >> "$importedtables"
+ echo "=== Import END $SELTABLES (RC=$IMPRC) ==="
+ echo "=== $(expimp_progress_bar "$IMPNR" "$IMPTOTAL") done ==="
  echo ""
  sleep 1
 done < "$importtables"

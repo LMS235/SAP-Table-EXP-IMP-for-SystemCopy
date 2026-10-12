@@ -123,3 +123,11 @@ expimp_dialog() {
  rm -f "$outfile" "$errfile"
  return "$rc"
 }
+
+# progress bar for the progress box, e.g. "[##########..........] 5/10 (50%)"
+expimp_progress_bar() {
+ local cur=$1 total=$2 width=20 fill
+ [ "$total" -gt 0 ] || total=1
+ fill=$((cur * width / total))
+ printf '[%s%s] %d/%d (%d%%)' "$(printf '%*s' "$fill" '' | tr ' ' '#')" "$(printf '%*s' $((width - fill)) '' | tr ' ' '.')" "$cur" "$total" $((cur * 100 / total))
+}

@@ -141,11 +141,18 @@ if ($seltables -contains 'STMS_QA') {
 
 # export and export dialog
 try {
-    Start-UiProgressView -Text 'Export SAP Tables'
+    # progress: number of the template / number of templates
+    $exptotal = $seltables.Count
+    $expnr    = 0
+    Start-UiProgressView -Text "Export SAP Tables ($exptotal templates)"
     foreach ($SELTABLES in $seltables) {
+        $expnr++
+        Write-Host "=== Export $expnr/$exptotal`: $SELTABLES ===" -ForegroundColor Cyan
         $templatefile = Join-Path $templatedir $SELTABLES
         if (-not (Test-Path -LiteralPath $templatefile)) {
             Write-Host "=== Export SKIPPED $SELTABLES (template missing) ===" -ForegroundColor Yellow
+            Write-Host "=== $(Get-ExpImpProgressBar -Current $expnr -Total $exptotal) done ===" -ForegroundColor Green
+            Write-Host ''
             Add-Content -LiteralPath $exportedtables -Value "$SELTABLES|RC=TEMPLATE_MISSING|SHA256=" -Encoding ascii
             continue
         }
@@ -165,7 +172,6 @@ try {
         }
         Write-AsciiFile -Path $tplfile -Lines $tpl.ToArray()
 
-        Write-Host "=== Export START $SELTABLES ===" -ForegroundColor Cyan
         # R3trans writes warnings to stderr - '2>&1' would raise a terminating
         # error under $ErrorActionPreference = 'Stop' (Windows PowerShell 5.1)
         $prevEap = $ErrorActionPreference
@@ -179,7 +185,8 @@ try {
         $sha256 = ''
         if (Test-Path -LiteralPath $datfile) { $sha256 = Get-ExpImpSha256 -Path $datfile }
         Add-Content -LiteralPath $exportedtables -Value "$SELTABLES|RC=$rc|SHA256=$sha256" -Encoding ascii
-        Write-Host "=== Export END $SELTABLES ===" -ForegroundColor Cyan
+        Write-Host "=== Export END $SELTABLES (RC=$rc) ===" -ForegroundColor Cyan
+        Write-Host "=== $(Get-ExpImpProgressBar -Current $expnr -Total $exptotal) done ===" -ForegroundColor Green
         Write-Host ''
         Start-Sleep -Seconds 1
     }

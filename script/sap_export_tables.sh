@@ -159,14 +159,20 @@ then
  fi
 fi
 
-# export and export dialog
-expimp_dialog --title "$global_title" --backtitle "$global_backtitle" --progressbox "Export SAP Tables" @H@ @W@ < <(
+# export and export dialog (with progress: number of the template / number of templates)
+EXPTOTAL=$(grep -c . "$selectedtablesforexport")
+expimp_dialog --title "$global_title" --backtitle "$global_backtitle" --progressbox "Export SAP Tables ($EXPTOTAL templates)" @H@ @W@ < <(
+EXPNR=0
 while IFS= read -r SELTABLES
 do
+ EXPNR=$((EXPNR + 1))
+ echo "=== Export $EXPNR/$EXPTOTAL: $SELTABLES ==="
  if [ ! -f "$global_pwd/templates/$SELTABLES" ]
   then
 	echo "=== Export SKIPPED $SELTABLES (template missing) ==="
 	echo "$SELTABLES|RC=TEMPLATE_MISSING|SHA256=" >> "$exportedtables"
+	echo "=== $(expimp_progress_bar "$EXPNR" "$EXPTOTAL") done ==="
+	echo ""
 	continue
  fi
  {
@@ -176,14 +182,14 @@ do
   echo "file = '$EXPIMPLOC/$SELTABLES.dat'"
   cat "$global_pwd/templates/$SELTABLES"
  } > "$EXPIMPLOC/$SELTABLES.tpl"
- echo "=== Export START $SELTABLES ==="
  # R3trans error output is shown in the progress box too
  R3trans -w "$EXPIMPLOC/$SELTABLES.exp.log" "$EXPIMPLOC/$SELTABLES.tpl" 2>&1
  EXPRC=$?
  EXPSHA256=""
  [ -f "$EXPIMPLOC/$SELTABLES.dat" ] && EXPSHA256=$(expimp_sha256 "$EXPIMPLOC/$SELTABLES.dat")
  echo "$SELTABLES|RC=$EXPRC|SHA256=$EXPSHA256" >> "$exportedtables"
- echo "=== Export END $SELTABLES ==="
+ echo "=== Export END $SELTABLES (RC=$EXPRC) ==="
+ echo "=== $(expimp_progress_bar "$EXPNR" "$EXPTOTAL") done ==="
  echo ""
  sleep 1
 done < "$selectedtablesforexport"

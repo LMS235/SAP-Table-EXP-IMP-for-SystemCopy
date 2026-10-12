@@ -136,6 +136,16 @@ function Get-ExpImpMaxRc {
     return $max
 }
 
+# progress bar for the progress view, e.g. "[##########..........] 5/10 (50%)"
+function Get-ExpImpProgressBar {
+    param([int]$Current, [int]$Total)
+    if ($Total -lt 1) { $Total = 1 }
+    $width = 20
+    $fill  = [int][Math]::Floor($Current * $width / $Total)
+    $pct   = [int][Math]::Floor($Current * 100 / $Total)
+    return ('[' + ('#' * $fill) + ('.' * ($width - $fill)) + "] $Current/$Total ($pct%)")
+}
+
 # value of a metadata line "# KEY=value" in an info file
 function Get-ExpImpMeta {
     param([string]$Path, [string]$Key)
