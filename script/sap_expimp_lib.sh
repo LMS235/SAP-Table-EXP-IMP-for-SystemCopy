@@ -4,7 +4,29 @@
 # SAP(R) Table EXP/IMP for SystemCopy (c) Florian Lamml 2026
 # www.florian-lamml.de
 # helper functions (shared by main / export / import script)
-# Version 1.10 - Security Hardening
+# Version 1.0 - Initial Release
+# Version 1.1 - Client Config
+# Version 1.2 - New Tables
+# Version 1.3 - Template Correction
+# Version 1.4 - Minor Corrections
+# Version 1.5 - Cloud ALM Template
+# Version 1.6 - Corrections Cloud ALM and GTS Template
+# Version 1.7 - More Templates
+# Version 1.7.1 - More Templates Correction
+# Version 1.7.2 - BD97 Template
+# Version 1.8 - R3load Parallel Parameter
+# Version 1.8.1 - More Templates
+# Version 1.8.2 - More Templates
+# Version 1.8.3 - $SAPSYSTEMNAME in default expimp location
+# Version 1.8.4 - Correction of OAC0 Template
+# Version 1.8.5 - OMIQ Template, Correction OAC0 Template
+# Version 1.8.6 - Correct OAC0 Template
+# Version 1.8.7 - Correct UCON Template, ADD ALECUSTOMIZINGNOTADIR (ALECUSTOMIZING without TADIR)
+# Version 1.8.8 - New Template RZ20andRZ21, New Template SM37-S4 (old is SM37-R3), New Template OAUTHCONFIG, renaming some templates
+# Version 1.8.9 - New Template OAC0-NOTOA01
+# Version 1.9   - PowerShell Port for Windows
+# Version 1.9.1 - Correct VSCAN Template
+# Version 1.10  - Security Hardening (permissions, checksums, target check, backup, user and config check)
 # Version 2.0 - komplett überarbeitet mit neuen Funktionen und Sicherheitsoptionen
 
 # find a tool for SHA-256 checksums (sha256sum on Linux, csum or openssl on AIX)
