@@ -50,7 +50,7 @@ if [ -n "$OLDRUNFILES" ]
 	BACKUPDIR=$EXPIMPLOC/backup/$(date "+%Y%m%d_%H%M%S")
 	BACKUPKEEPINFO=""
 	[ "$BACKUPKEEP" -gt 0 ] && BACKUPKEEPINFO="\n\nOnly the newest $BACKUPKEEP backups are kept (BACKUPKEEP),\nolder backups will be deleted!"
-	dialog --title "$global_title" --backtitle "$global_backtitle"  --yes-label "Continue" --no-label "Exit" --yesno  "There are files of a previous run in $EXPIMPLOC\n\nIf you continue these files will be copied to\n$BACKUPDIR\nand then deleted!$BACKUPKEEPINFO" "$global_height" "$global_width"
+	expimp_dialog --title "$global_title" --backtitle "$global_backtitle"  --yes-label "Continue" --no-label "Exit" --yesno  "There are files of a previous run in $EXPIMPLOC\n\nIf you continue these files will be copied to\n$BACKUPDIR\nand then deleted!$BACKUPKEEPINFO" @H@ @W@
 	CONTINUE=$?
 	case $CONTINUE in
 		0)
@@ -105,7 +105,7 @@ do
 done
 
 # select the templates
-if ! dialog --title "$global_title" --backtitle "$global_backtitle" --separate-output --checklist "Select the Templates for Export:" "$global_height" "$global_width" "$global_list" "${TEMPLATELIST[@]}" 2> "$selectedtablesforexport"
+if ! expimp_dialog --title "$global_title" --backtitle "$global_backtitle" --separate-output --checklist "Select the Templates for Export:" @H@ @W@ @L@ "${TEMPLATELIST[@]}" > "$selectedtablesforexport"
  then
     echo "ERROR: fail to select templates for export" >> "$EXPIMPLOGFILE"
 	rm -f "$selectedtablesforexport"
@@ -151,7 +151,7 @@ fi
 # check STMS_QA export
 if grep -q STMS_QA "$selectedtablesforexport"
 then
- dialog --title "$global_title" --backtitle "$global_backtitle" --exit-label "Continue" --msgbox "You are going to export STMS_QA \n\n Please refresh STMS_QA before continue" "$global_height" "$global_width"
+ expimp_dialog --title "$global_title" --backtitle "$global_backtitle" --exit-label "Continue" --msgbox "You are going to export STMS_QA \n\n Please refresh STMS_QA before continue" @H@ @W@
  # check ESC hit
  if [ $? -eq 255 ];
  then
@@ -160,7 +160,7 @@ then
 fi
 
 # export and export dialog
-dialog --title "$global_title" --backtitle "$global_backtitle" --progressbox "Export SAP Tables" "$global_height" "$global_width" < <(
+expimp_dialog --title "$global_title" --backtitle "$global_backtitle" --progressbox "Export SAP Tables" @H@ @W@ < <(
 while IFS= read -r SELTABLES
 do
  if [ ! -f "$global_pwd/templates/$SELTABLES" ]
@@ -199,7 +199,7 @@ clear
 } >> "$EXPIMPLOGFILE"
 
 # export info
-if ! dialog --title "$global_title" --backtitle "$global_backtitle" --exit-label "Continue" --textbox "$exportedtables" "$global_height" "$global_width"
+if ! expimp_dialog --title "$global_title" --backtitle "$global_backtitle" --exit-label "Continue" --textbox "$exportedtables" @H@ @W@
  then
 	echo "ERROR: export info error" >> "$EXPIMPLOGFILE"
 	exit 14

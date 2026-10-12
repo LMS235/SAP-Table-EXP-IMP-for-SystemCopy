@@ -112,9 +112,9 @@ export EXPIMPPERM=OPEN
 # directory of this script (templates, sub scripts) - independent of the current directory
 global_pwd=$(cd "$(dirname "$0")" && pwd)
 export global_pwd
+# maximum size of the dialogs (limited to the size of the terminal)
 export global_height=45
 export global_width=80
-export global_list=35
 export global_title="SAP Table EXP/IMP for SystemCopy (c) Florian Lamml 2026"
 export global_backtitle="SAP Table EXP/IMP for SystemCopy (c) Florian Lamml 2026"
 export global_copy="(c) Florian Lamml 2026"
@@ -307,33 +307,13 @@ if ! dialog > /dev/null 2>&1;
 	exit 97
 fi
 
-# limit the dialog size to the size of the terminal (dialog fails if the terminal is smaller)
-TERMSIZE=$(stty size < /dev/tty 2>/dev/null)
-TERMLINES=${TERMSIZE% *}
-TERMCOLS=${TERMSIZE#* }
-case "$TERMLINES$TERMCOLS" in
- ''|*[!0-9]*) TERMLINES=$(tput lines 2>/dev/null); TERMCOLS=$(tput cols 2>/dev/null) ;;
-esac
-case "$TERMLINES" in
- ''|*[!0-9]*) ;;
- *) [ "$TERMLINES" -lt $((global_height + 2)) ] && global_height=$((TERMLINES - 2)) ;;
-esac
-case "$TERMCOLS" in
- ''|*[!0-9]*) ;;
- *) [ "$TERMCOLS" -lt $((global_width + 2)) ] && global_width=$((TERMCOLS - 2)) ;;
-esac
-global_list=$((global_height - 10))
-[ "$global_list" -lt 1 ] && global_list=1
-export global_height global_width global_list
-
 # EXPORT or IMPORT dialog
-# ascii art only if the terminal is big enough for it
-STARTART=""
-[ "$global_height" -ge 34 ] && STARTART="   _______   ___ \n  / __/ _ | / _ \ \n _\ \/ __ |/ ___/\n/___/_/ |_/_/    \n _________   ___  __   ____\n/_  __/ _ | / _ )/ /  / __/\n / / / __ |/ _  / /__/ _/  \n/_/ /_/ |_/____/____/___/  \n   _____  _____  ______  ______ \n  / __/ |/_/ _ \/  _/  |/  / _ \ \n / _/_>  </ ___// // /|_/ / ___/\n/___/_/|_/_/  /___/_/  /_/_/    \n\n"
-DIALOG=(dialog --title "$global_title" --backtitle "$global_backtitle"  --radiolist  "${STARTART}EXPORT or IMPORT Tables?\n\nINFO: $EXPIMPLOCINFO\nINFO: $EXPIMPLOC \n\nCLIENT: $EXPCLIENT | PARALLEL: $PARALLEL | BACKUPKEEP: $BACKUPKEEP | PERM: $EXPIMPPERM\nOS: $OS | USER: $CURUSER | SAPSYSTEM: $SAPSYSTEMNAME\n\n                                $global_copy" "$global_height" "$global_width" 2)
+# ascii art (only shown if the terminal is big enough for it)
+export EXPIMPART="   _______   ___ \n  / __/ _ | / _ \ \n _\ \/ __ |/ ___/\n/___/_/ |_/_/    \n _________   ___  __   ____\n/_  __/ _ | / _ )/ /  / __/\n / / / __ |/ _  / /__/ _/  \n/_/ /_/ |_/____/____/___/  \n   _____  _____  ______  ______ \n  / __/ |/_/ _ \/  _/  |/  / _ \ \n / _/_>  </ ___// // /|_/ / ___/\n/___/_/|_/_/  /___/_/  /_/_/    \n\n"
+DIALOG=(expimp_dialog --title "$global_title" --backtitle "$global_backtitle"  --radiolist  "@ART@EXPORT or IMPORT Tables?\n\nINFO: $EXPIMPLOCINFO\nINFO: $EXPIMPLOC \n\nCLIENT: $EXPCLIENT | PARALLEL: $PARALLEL | BACKUPKEEP: $BACKUPKEEP | PERM: $EXPIMPPERM\nOS: $OS | USER: $CURUSER | SAPSYSTEM: $SAPSYSTEMNAME\n\n                                $global_copy" @H@ @W@ 2)
 OPTIONS=("EXPORT" "Export SAP Tables" on "IMPORT" "Import SAP Tables" off)
 # check ESC / Cancel hit
-if ! EXPORIMP=$("${DIALOG[@]}" "${OPTIONS[@]}" 2>&1 >/dev/tty);
+if ! EXPORIMP=$("${DIALOG[@]}" "${OPTIONS[@]}");
  then
 	clear
 	echo "Hit ESC / Cancel"
@@ -370,7 +350,7 @@ EXPIMPRUNINFO=""
 case "$EXPIMPRUNRC" in
  13|25) EXPIMPRUNINFO="\n\nERROR: at least one table failed (R3trans RC >= 8 or template missing)!\nPlease check the R3trans log files (*.exp.log / *.imp.log)." ;;
 esac
-dialog --title "$global_title" --backtitle "$global_backtitle"  --ok-label "EXIT" --msgbox "$EXPIMPRUN$EXPIMPRUNRC$EXPIMPRUNINFO\n\nLogfiles can be found in $EXPIMPLOC" "$global_height" "$global_width"
+expimp_dialog --title "$global_title" --backtitle "$global_backtitle"  --ok-label "EXIT" --msgbox "$EXPIMPRUN$EXPIMPRUNRC$EXPIMPRUNINFO\n\nLogfiles can be found in $EXPIMPLOC" @H@ @W@
 
 # exit
 clear

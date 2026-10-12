@@ -45,3 +45,81 @@ expimp_run_files() {
   [ -f "$f" ] && echo "$f"
  done
 }
+
+# current size of the dialogs: at most global_height x global_width (45 x 80),
+# limited to the current size of the terminal (sets DLGH, DLGW and DLGL = list height)
+expimp_dialog_size() {
+ local termsize termlines termcols
+ termsize=$(stty size < /dev/tty 2>/dev/null)
+ termlines=${termsize% *}
+ termcols=${termsize#* }
+ case "$termlines$termcols" in
+  ''|*[!0-9]*) termlines=$(tput lines 2>/dev/null); termcols=$(tput cols 2>/dev/null) ;;
+ esac
+ DLGH=${global_height:-45}
+ DLGW=${global_width:-80}
+ case "$termlines" in
+  ''|*[!0-9]*) ;;
+  *) [ "$termlines" -lt $((DLGH + 2)) ] && DLGH=$((termlines - 2)) ;;
+ esac
+ case "$termcols" in
+  ''|*[!0-9]*) ;;
+  *) [ "$termcols" -lt $((DLGW + 2)) ] && DLGW=$((termcols - 2)) ;;
+ esac
+ DLGL=$((DLGH - 10))
+ [ "$DLGL" -lt 1 ] && DLGL=1
+}
+
+# run dialog with the current size of the terminal
+# - the size arguments are given as @H@ @W@ @L@ (height, width, list height) and the
+#   text @ART@ is replaced by EXPIMPART if the dialog is high enough for it (34 lines)
+# - the result of dialog (selection, input) is written to stdout
+# - older dialog versions end with an error if the terminal is made smaller than the
+#   dialog - then the dialog is shown again with the new size (instead of "ESC")
+# - progressbox: the input is always read completely, so the writing process (R3trans)
+#   is never ended by a broken pipe, even if dialog ends with an error
+expimp_dialog() {
+ local rc tries arg args progress errfile outfile
+ errfile=$EXPIMPLOC/.expimp_dialog_err.$$
+ outfile=$EXPIMPLOC/.expimp_dialog_out.$$
+ progress=no
+ for arg in "$@"; do [ "$arg" = "--progressbox" ] && progress=yes; done
+ tries=0
+ while :
+ do
+  expimp_dialog_size
+  args=()
+  for arg in "$@"
+  do
+   case "$arg" in
+    @H@) arg=$DLGH ;;
+    @W@) arg=$DLGW ;;
+    @L@) arg=$DLGL ;;
+    *@ART@*) if [ "$DLGH" -ge 34 ]; then arg=${arg//@ART@/"$EXPIMPART"}; else arg=${arg//@ART@/}; fi ;;
+   esac
+   args+=("$arg")
+  done
+  dialog --output-fd 3 "${args[@]}" 3> "$outfile" 2> "$errfile" > /dev/tty
+  rc=$?
+  # error of dialog (not ESC): show the dialog again with the current size
+  if [ "$rc" -ne 0 ] && [ "$rc" -ne 1 ] && [ -s "$errfile" ] && [ "$tries" -lt 300 ]
+   then
+	tries=$((tries + 1))
+	if [ "$progress" = yes ]
+	 then
+		# discard the output for a moment (it is in the R3trans log files)
+		while IFS= read -r -t 1 _; do :; done
+	else
+		sleep 1
+	fi
+	continue
+  fi
+  break
+ done
+ # progressbox: read the rest of the input (never break the pipe of R3trans)
+ [ "$progress" = yes ] && cat > /dev/null
+ cat "$outfile" 2>/dev/null
+ [ "$rc" -ne 0 ] && [ "$rc" -ne 1 ] && cat "$errfile" >&2 2>/dev/null
+ rm -f "$outfile" "$errfile"
+ return "$rc"
+}

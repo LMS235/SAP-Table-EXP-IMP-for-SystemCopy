@@ -71,7 +71,7 @@ if [ "${#IMPSRCDIRS[@]}" -gt 1 ]
 	 [ "$IMPSRCNR" -eq 1 ] && IMPSRCSTATE=on || IMPSRCSTATE=off
 	 IMPSRCLIST+=("$IMPSRCNR" "$IMPSRCNAME | ${IMPSRCDATE:-unknown date} | SID ${IMPSRCSID:-unknown} | $IMPSRCCOUNT exports" "$IMPSRCSTATE")
 	done
-	if ! IMPSRCNR=$(dialog --title "$global_title" --backtitle "$global_backtitle" --radiolist "Select the export to import (default is the newest):" "$global_height" "$global_width" "$global_list" "${IMPSRCLIST[@]}" 2>&1 >/dev/tty)
+	if ! IMPSRCNR=$(expimp_dialog --title "$global_title" --backtitle "$global_backtitle" --radiolist "Select the export to import (default is the newest):" @H@ @W@ @L@ "${IMPSRCLIST[@]}")
 	 then
 		echo "INFO: no export selected for import" >> "$EXPIMPLOGFILE"
 		clear
@@ -90,7 +90,7 @@ exportedtablesok=$IMPSRC/exported_tables_ok.conf
 # check existing data
 if [ -e "$exportedtablesok" ]
  then
-	dialog --title "$global_title" --backtitle "$global_backtitle"  --yes-label "Continue" --no-label "Exit" --yesno  "There are import files in $IMPSRC\nIf you continue these files will be deleted!" "$global_height" "$global_width"
+	expimp_dialog --title "$global_title" --backtitle "$global_backtitle"  --yes-label "Continue" --no-label "Exit" --yesno  "There are import files in $IMPSRC\nIf you continue these files will be deleted!" @H@ @W@
 	case $? in
 		0)
 			echo "INFO: delete old files" >> "$EXPIMPLOGFILE"
@@ -128,7 +128,7 @@ do
 done < "$exportedtablesok"
 
 # select exported tables for import
-if ! dialog --title "$global_title" --backtitle "$global_backtitle" --separate-output --checklist "Select the exports to import:" "$global_height" "$global_width" "$global_list" "${IMPORTLISTITEMS[@]}" 2> "$importtables"
+if ! expimp_dialog --title "$global_title" --backtitle "$global_backtitle" --separate-output --checklist "Select the exports to import:" @H@ @W@ @L@ "${IMPORTLISTITEMS[@]}" > "$importtables"
  then
 	echo "ERROR: import select error" >> "$EXPIMPLOGFILE"
 	exit 23
@@ -181,7 +181,7 @@ echo "=== verify checksums ===" >> "$EXPIMPLOGFILE"
 if [ -n "$CHECKSUMERROR" ]
  then
 	echo "ERROR: checksum verification failed:$CHECKSUMERROR" >> "$EXPIMPLOGFILE"
-	dialog --title "$global_title" --backtitle "$global_backtitle" --ok-label "EXIT" --msgbox "Checksum verification FAILED - nothing was imported!\n\nThe data files of these exports are missing or were changed after the export:\n\n$CHECKSUMERROR\n\nDetails can be found in $EXPIMPLOGFILE" "$global_height" "$global_width"
+	expimp_dialog --title "$global_title" --backtitle "$global_backtitle" --ok-label "EXIT" --msgbox "Checksum verification FAILED - nothing was imported!\n\nThe data files of these exports are missing or were changed after the export:\n\n$CHECKSUMERROR\n\nDetails can be found in $EXPIMPLOGFILE" @H@ @W@
 	clear
 	exit 27
 fi
@@ -202,7 +202,7 @@ if [ -n "$EXPHOST" ] && [ "$EXPHOST" != "$CURHOST" ]
 	IMPORTWARNING="$IMPORTWARNING\nINFO: the export was created on another host ($EXPHOST)\n"
 fi
 IMPORTLIST=$(tr '\n' ' ' < "$importtables")
-if ! dialog --title "$global_title" --backtitle "$global_backtitle" --defaultno --yes-label "Import" --no-label "Exit" --yesno "Export: $IMPSRC\n\nYou are going to IMPORT into\n\n  SAPSYSTEM: $SAPSYSTEMNAME | HOST: $CURHOST\n\nThe export was created on\n\n  SAPSYSTEM: ${EXPSID:-unknown} | HOST: ${EXPHOST:-unknown} | CLIENT: ${EXPCLIENTINFO:-unknown}\n  USER: ${EXPUSER:-unknown} | DATE: ${EXPDATE:-unknown}\n$IMPORTWARNING\nSelected exports:\n$IMPORTLIST\n\nThe existing content of these tables will be DELETED and replaced!\n\nContinue with the import?" "$global_height" "$global_width"
+if ! expimp_dialog --title "$global_title" --backtitle "$global_backtitle" --defaultno --yes-label "Import" --no-label "Exit" --yesno "Export: $IMPSRC\n\nYou are going to IMPORT into\n\n  SAPSYSTEM: $SAPSYSTEMNAME | HOST: $CURHOST\n\nThe export was created on\n\n  SAPSYSTEM: ${EXPSID:-unknown} | HOST: ${EXPHOST:-unknown} | CLIENT: ${EXPCLIENTINFO:-unknown}\n  USER: ${EXPUSER:-unknown} | DATE: ${EXPDATE:-unknown}\n$IMPORTWARNING\nSelected exports:\n$IMPORTLIST\n\nThe existing content of these tables will be DELETED and replaced!\n\nContinue with the import?" @H@ @W@
  then
 	echo "INFO: import not confirmed" >> "$EXPIMPLOGFILE"
 	clear
@@ -210,7 +210,7 @@ if ! dialog --title "$global_title" --backtitle "$global_backtitle" --defaultno 
 fi
 if [ "$CONFIRMSID" = yes ]
  then
-	if ! TYPEDSID=$(dialog --title "$global_title" --backtitle "$global_backtitle" --inputbox "The export was created by an older version - the source system and the data files could not be verified!\n\nType the SID of this system ($SAPSYSTEMNAME) to confirm the import:" "$global_height" "$global_width" 2>&1 >/dev/tty) || [ "$TYPEDSID" != "$SAPSYSTEMNAME" ]
+	if ! TYPEDSID=$(expimp_dialog --title "$global_title" --backtitle "$global_backtitle" --inputbox "The export was created by an older version - the source system and the data files could not be verified!\n\nType the SID of this system ($SAPSYSTEMNAME) to confirm the import:" @H@ @W@) || [ "$TYPEDSID" != "$SAPSYSTEMNAME" ]
 	 then
 		echo "INFO: import not confirmed (SID not confirmed)" >> "$EXPIMPLOGFILE"
 		clear
@@ -231,7 +231,7 @@ importedtables=$IMPSRC/imported_tables.conf
 } > "$importedtables"
 
 # import tables
-dialog --title "$global_title" --backtitle "$global_backtitle" --progressbox "Import selected tables" "$global_height" "$global_width" < <(
+expimp_dialog --title "$global_title" --backtitle "$global_backtitle" --progressbox "Import selected tables" @H@ @W@ < <(
 while IFS= read -r SELTABLES
 do
  echo "=== Import START $SELTABLES ==="
@@ -254,7 +254,7 @@ clear
 } >> "$EXPIMPLOGFILE"
 
 # import info
-if ! dialog --title "$global_title" --backtitle "$global_backtitle" --exit-label "Continue" --textbox "$importedtables" "$global_height" "$global_width"
+if ! expimp_dialog --title "$global_title" --backtitle "$global_backtitle" --exit-label "Continue" --textbox "$importedtables" @H@ @W@
  then
 	echo "ERROR: import info error" >> "$EXPIMPLOGFILE"
 	exit 26
