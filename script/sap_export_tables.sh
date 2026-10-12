@@ -194,7 +194,8 @@ do
   echo "client = $EXPCLIENT"
   [ "$PARALLEL" -ne 0 ] && echo "parallel = $PARALLEL"
   echo "file = '$EXPIMPLOC/$SELTABLES.dat'"
-  cat "$global_pwd/templates/$SELTABLES"
+  # every line with a line break (also the last line of a template without one)
+  awk '1' "$global_pwd/templates/$SELTABLES"
  } > "$EXPIMPLOC/$SELTABLES.tpl"
  # R3trans error output is shown in the progress box too
  R3trans -w "$EXPIMPLOC/$SELTABLES.exp.log" "$EXPIMPLOC/$SELTABLES.tpl" 2>&1
