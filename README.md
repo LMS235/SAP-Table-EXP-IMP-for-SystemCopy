@@ -75,6 +75,7 @@ Both main scripts have the same config options at the top:
 | Option | Description |
 | --- | --- |
 | `EXPIMPLOC` | export / import location (absolute path), default `<script dir>/expimp/<SID>` |
+| `ADDSIDTOEXPIMP` | `TRUE` / `FALSE`, default `TRUE`: the SID is added to a set `EXPIMPLOC` if it does not end with the SID (`/tmp/expimp` → `/tmp/expimp/<SID>`) |
 | `EXPCLIENT` | `ALL`, `DEFAULT` or a 3-digit client number, default `ALL` |
 | `PARALLEL` | R3trans parallel parameter (SAP note 1127194), `0` or a positive number, default `0` |
 | `BACKUPKEEP` | number of backups of previous runs to keep in `EXPIMPLOC/backup`, `0` = unlimited, default `0` |
@@ -82,6 +83,11 @@ Both main scripts have the same config options at the top:
 | `EXPIMPGROUP` | Windows only: group with access to `EXPIMPLOC` (e.g. other `<sid>adm` users), default `SAP_LocalAdmin` |
 
 Invalid values stop the script with exit code 91.
+
+> [!NOTE]
+> To import the export of **another** system from a shared location (e.g. export as `tstadm`,
+> import as `prdadm`), set `EXPIMPLOC` of the importing system to the directory of the export
+> (e.g. `/share/expimp/TST`) and `ADDSIDTOEXPIMP=FALSE` - otherwise `/share/expimp/TST/PRD` is used.
 
 ## Security
 
@@ -133,7 +139,7 @@ Invalid values stop the script with exit code 91.
 | 93 | no SHA-256 tool found (Unix only) |
 | 92 | user is not `<sid>adm` |
 | 90 | export / import script started directly (must be started by the main script) |
-| 91 | invalid config value (`EXPIMPLOC`, `EXPCLIENT`, `PARALLEL`, `BACKUPKEEP`, `EXPIMPPERM`) |
+| 91 | invalid config value (`EXPIMPLOC`, `ADDSIDTOEXPIMP`, `EXPCLIENT`, `PARALLEL`, `BACKUPKEEP`, `EXPIMPPERM`) |
 | 10 | export: exit because old run detected |
 | 11 | export: fail to select templates for export |
 | 12 | export: no template selected for export |

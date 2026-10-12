@@ -31,6 +31,15 @@ $Error.Clear()
 $EXPIMPLOC = ''
 ###########################################
 
+##### CONFIG ADD SID TO EXPIMPLOC #########
+# TRUE  = the SID is added to EXPIMPLOC if
+#         it does not end with the SID
+#         (D:\expimp -> D:\expimp\SID)
+# FALSE = EXPIMPLOC is used as it is
+# Default Value = TRUE
+$ADDSIDTOEXPIMP = 'TRUE'
+###########################################
+
 ##### CONFIG CLIENT #######################
 # DEFAULT (000), ALL or CLIENT Number
 # Default Value = ALL
@@ -85,7 +94,7 @@ $EXPIMPGROUP = 'SAP_LocalAdmin'
 # 94 - cannot create export location / location not writable
 # 92 - user is not <sid>adm
 # 90 - export / import script started directly (not by sap_tab_exp_imp.ps1)
-# 91 - invalid config value (EXPIMPLOC, EXPCLIENT, PARALLEL, BACKUPKEEP)
+# 91 - invalid config value (EXPIMPLOC, ADDSIDTOEXPIMP, EXPCLIENT, PARALLEL, BACKUPKEEP)
 # export
 # 10 - exit because old run detected
 # 11 - fail to select templates for export
@@ -214,6 +223,15 @@ $Global:EXPCLIENT  = $EXPCLIENT
 $Global:PARALLEL   = [int]$PARALLEL
 $Global:BACKUPKEEP = [int]$BACKUPKEEP
 
+# ADDSIDTOEXPIMP check (default TRUE)
+if ($null -eq $ADDSIDTOEXPIMP -or "$ADDSIDTOEXPIMP" -eq '') { $ADDSIDTOEXPIMP = 'TRUE' }
+$ADDSIDTOEXPIMP = "$ADDSIDTOEXPIMP".Trim().ToUpper()
+if ($ADDSIDTOEXPIMP -notin @('TRUE', 'FALSE')) {
+    Write-Host "ADDSIDTOEXPIMP '$ADDSIDTOEXPIMP' is invalid (allowed: TRUE or FALSE)"
+    Write-Host '... EXIT NOW'
+    exit 91
+}
+
 # check export location
 if ([string]::IsNullOrWhiteSpace($EXPIMPLOC)) {
     $Global:EXPIMPLOCINFO = 'EXPIMPLOC is not set, use default'
@@ -221,6 +239,16 @@ if ([string]::IsNullOrWhiteSpace($EXPIMPLOC)) {
 } else {
     $Global:EXPIMPLOCINFO = 'EXPIMPLOC is set to'
     $Global:EXPIMPLOC     = $EXPIMPLOC
+    # add the SID if EXPIMPLOC does not end with it (e.g. D:\expimp -> D:\expimp\SID)
+    if ($ADDSIDTOEXPIMP -eq 'TRUE') {
+        $loc = $EXPIMPLOC.TrimEnd('\', '/')
+        if ($loc -match '^[A-Za-z]:$') { $loc = $loc + '\' }
+        $last = ($loc -split '[\\/]')[-1]
+        if ($last -ne $env:SAPSYSTEMNAME) {
+            $Global:EXPIMPLOC     = Join-Path $loc "$env:SAPSYSTEMNAME"
+            $Global:EXPIMPLOCINFO = 'EXPIMPLOC is set to (SID added, ADDSIDTOEXPIMP=TRUE)'
+        }
+    }
 }
 if ($Global:EXPIMPLOC -match "['\r\n]") {
     Write-Host "EXPIMPLOC '$($Global:EXPIMPLOC)' is invalid (must not contain quotes or line breaks)"

@@ -29,6 +29,15 @@
 export EXPIMPLOC=
 ###########################################
 
+##### CONFIG ADD SID TO EXPIMPLOC #########
+# TRUE  = the SID is added to EXPIMPLOC if
+#         it does not end with the SID
+#         (/tmp/expimp -> /tmp/expimp/SID)
+# FALSE = EXPIMPLOC is used as it is
+# Default Value = TRUE
+export ADDSIDTOEXPIMP=TRUE
+###########################################
+
 ##### CONFIG CLIENT #######################
 # DEFAULT (000), ALL or CLIENT Number
 # Default Value = ALL
@@ -87,7 +96,7 @@ export EXPIMPPERM=STRICT
 # 93 - no SHA-256 tool found (sha256sum, shasum, csum or openssl)
 # 92 - user is not <sid>adm
 # 90 - export / import script started directly (not by sap_tab_exp_imp.sh)
-# 91 - invalid config value (EXPIMPLOC, EXPCLIENT, PARALLEL, BACKUPKEEP, EXPIMPPERM)
+# 91 - invalid config value (EXPIMPLOC, ADDSIDTOEXPIMP, EXPCLIENT, PARALLEL, BACKUPKEEP, EXPIMPPERM)
 # export
 # 10 - exit because old run detected
 # 11 - fail to select templates for export
@@ -204,6 +213,18 @@ case "$EXPIMPPERM" in
 esac
 export EXPIMPPERM
 
+# ADDSIDTOEXPIMP check (default TRUE)
+ADDSIDTOEXPIMP=$(echo "${ADDSIDTOEXPIMP:-TRUE}" | tr '[:lower:]' '[:upper:]')
+case "$ADDSIDTOEXPIMP" in
+ TRUE|FALSE) ;;
+ *)
+   echo "ADDSIDTOEXPIMP '$ADDSIDTOEXPIMP' is invalid (allowed: TRUE or FALSE)"
+   echo "... EXIT NOW"
+   exit 91
+   ;;
+esac
+export ADDSIDTOEXPIMP
+
 # check export location
 if [ -z "$EXPIMPLOC" ]; 
  then 
@@ -211,6 +232,18 @@ if [ -z "$EXPIMPLOC" ];
  export EXPIMPLOC="$global_pwd/expimp/$SAPSYSTEMNAME"
 else 
  export EXPIMPLOCINFO="EXPIMPLOC is set to"; 
+ # add the SID if EXPIMPLOC does not end with it (e.g. /tmp/expimp -> /tmp/expimp/SID)
+ if [ "$ADDSIDTOEXPIMP" = TRUE ]
+  then
+	while [ "${EXPIMPLOC%/}" != "$EXPIMPLOC" ] && [ "$EXPIMPLOC" != "/" ]; do EXPIMPLOC=${EXPIMPLOC%/}; done
+	EXPIMPLOCLAST=$(echo "${EXPIMPLOC##*/}" | tr '[:lower:]' '[:upper:]')
+	if [ "$EXPIMPLOCLAST" != "$(echo "$SAPSYSTEMNAME" | tr '[:lower:]' '[:upper:]')" ]
+	 then
+		EXPIMPLOC="${EXPIMPLOC%/}/$SAPSYSTEMNAME"
+		EXPIMPLOCINFO="EXPIMPLOC is set to (SID added, ADDSIDTOEXPIMP=TRUE)"
+	fi
+ fi
+ export EXPIMPLOC
 fi
 NEWLINE='
 '
