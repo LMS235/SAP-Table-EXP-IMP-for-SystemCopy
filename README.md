@@ -37,7 +37,7 @@ at most 45 x 80 characters and are limited to the size of the terminal; the ASCI
 start dialog is only shown if the terminal is high enough.
 
 > [!NOTE]
-> Version 2.0 was tested on Linux (SLES for SAP 15 SP7, `dialog` 1.3), not yet on AIX.
+> Version 2.0 was tested on Linux (SLES for SAP 15 SP7, `dialog` 1.3).
 
 ## Windows
 
