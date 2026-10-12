@@ -23,6 +23,8 @@
 # Version 1.8.9 - New Template OAC0-NOTOA01
 # Version 1.9   - PowerShell Port for Windows
 # Version 1.9.1 - Correct VSCAN Template
+# Version 1.10  - Security Hardening (permissions, checksums, target check, backup, user and config check)
+# Version 2.0 - komplett überarbeitet mit neuen Funktionen und Sicherheitsoptionen
 
 # --- key codes -----------------------------------------------------------
 $Global:UiKeyEnter = 13
@@ -68,7 +70,101 @@ function Test-UiHost {
 # -------------------------------------------------------------------------
 function Write-ExpImpLog {
     param([string]$Message)
-    Add-Content -LiteralPath $Global:EXPIMPLOGFILE -Value $Message -Encoding ascii
+    # UTF-8: user names / paths with umlauts are kept (the R3trans control files stay ASCII)
+    Add-Content -LiteralPath $Global:EXPIMPLOGFILE -Value $Message -Encoding utf8
+}
+
+# -------------------------------------------------------------------------
+# export / import location helpers (permissions, checksums, metadata)
+# -------------------------------------------------------------------------
+
+# protect the export location (windows equivalent of umask 007 / chmod 770):
+# no inherited permissions, full control only for the current user, Administrators
+# and SYSTEM, modify for the access group (e.g. other <sid>adm users)
+# returns '' (ok), a warning text, or 'ERROR'
+function Protect-ExpImpLocation {
+    param([string]$Path, [string]$Group)
+    $warning = ''
+    try {
+        $acl  = New-Object System.Security.AccessControl.DirectorySecurity
+        $acl.SetAccessRuleProtection($true, $false)
+        $full = @(
+            [Security.Principal.WindowsIdentity]::GetCurrent().User,
+            (New-Object Security.Principal.SecurityIdentifier 'S-1-5-32-544'),  # Administrators
+            (New-Object Security.Principal.SecurityIdentifier 'S-1-5-18')       # SYSTEM
+        )
+        foreach ($sid in $full) {
+            $acl.AddAccessRule((New-Object System.Security.AccessControl.FileSystemAccessRule($sid, 'FullControl', 'ContainerInherit,ObjectInherit', 'None', 'Allow')))
+        }
+        if (-not [string]::IsNullOrWhiteSpace($Group)) {
+            try {
+                $gsid = (New-Object Security.Principal.NTAccount $Group).Translate([Security.Principal.SecurityIdentifier])
+                $acl.AddAccessRule((New-Object System.Security.AccessControl.FileSystemAccessRule($gsid, 'Modify', 'ContainerInherit,ObjectInherit', 'None', 'Allow')))
+            } catch {
+                $warning = "access group '$Group' not found - only the current user, Administrators and SYSTEM have access to $Path"
+            }
+        }
+        Set-Acl -LiteralPath $Path -AclObject $acl
+    } catch {
+        # not allowed to change the permissions (e.g. import by another <sid>adm) -
+        # ok if the location is already protected by an earlier run
+        try {
+            if ((Get-Acl -LiteralPath $Path).AreAccessRulesProtected) { return $warning }
+        } catch { }
+        return 'ERROR'
+    }
+    return $warning
+}
+
+# SHA-256 checksum of a file (lower case hex)
+function Get-ExpImpSha256 {
+    param([string]$Path)
+    return (Get-FileHash -LiteralPath $Path -Algorithm SHA256).Hash.ToLower()
+}
+
+# highest R3trans return code in an info file ("NAME|RC=n|..."),
+# a non-numeric return code (e.g. TEMPLATE_MISSING) counts as 12, TEMPLATE_EMPTY as 0
+function Get-ExpImpMaxRc {
+    param([string]$Path)
+    $max = 0
+    foreach ($line in @(Get-Content -LiteralPath $Path)) {
+        if ($line -match '^#') { continue }
+        $f = $line -split '\|'
+        if ($f.Count -lt 2 -or -not $f[1].StartsWith('RC=')) { continue }
+        $rc = $f[1].Substring(3)
+        if ($rc -eq 'TEMPLATE_EMPTY') { $rc = 0 } elseif ($rc -match '^[0-9]+\z') { $rc = [int]$rc } else { $rc = 12 }
+        if ($rc -gt $max) { $max = $rc }
+    }
+    return $max
+}
+
+# progress bar for the progress view, e.g. "[##########..........] 5/10 (50%)"
+function Get-ExpImpProgressBar {
+    param([int]$Current, [int]$Total)
+    if ($Total -lt 1) { $Total = 1 }
+    $width = 20
+    $fill  = [int][Math]::Floor($Current * $width / $Total)
+    $pct   = [int][Math]::Floor($Current * 100 / $Total)
+    return ('[' + ('#' * $fill) + ('.' * ($width - $fill)) + "] $Current/$Total ($pct%)")
+}
+
+# value of a metadata line "# KEY=value" in an info file
+function Get-ExpImpMeta {
+    param([string]$Path, [string]$Key)
+    foreach ($line in @(Get-Content -LiteralPath $Path)) {
+        if ($line.StartsWith("# $Key=")) { return $line.Substring($Key.Length + 3) }
+    }
+    return ''
+}
+
+# files of a previous export / import run in EXPIMPLOC
+function Get-ExpImpRunFiles {
+    $names = @('selected_tables_for_export.conf', 'exported_tables.conf', 'exported_tables_ok.conf',
+               'selected_tables_import.conf', 'imported_tables.conf')
+    return @(Get-ChildItem -LiteralPath $Global:EXPIMPLOC -File | Where-Object {
+        $names -contains $_.Name -or $_.Name -like '*.tpl' -or $_.Name -like '*.dat' -or
+        $_.Name -like '*.exp.log' -or $_.Name -like '*.imp.log'
+    })
 }
 
 function Read-UiKey {
@@ -105,10 +201,10 @@ function Get-UiBoxSize {
     $scrW = $s.W
     $scrH = $s.H
 
-    $w = [Math]::Min([int]$Global:global_width,  $scrW - 2)
-    $h = [Math]::Min([int]$Global:global_height, $scrH - 4)
-    if ($w -lt 40) { $w = [Math]::Max(40, $scrW - 2) }
-    if ($h -lt 12) { $h = [Math]::Max(12, $scrH - 4) }
+    # at most global_width x global_height, limited to the size of the window
+    # (a small minimum size keeps the box usable in a very small window)
+    $w = [Math]::Max(10, [Math]::Min([int]$Global:global_width,  $scrW - 2))
+    $h = [Math]::Max(6,  [Math]::Min([int]$Global:global_height, $scrH - 4))
 
     $pad = [Math]::Max(0, [int](($scrW - $w) / 2))
 
@@ -258,6 +354,16 @@ function New-UiButtonRow {
     return (New-UiInnerRow $Box ((' ' * $left) + $text) $Global:UiTitleFg $Global:UiBoxBg)
 }
 
+# OK / Cancel buttons, the selected one is shown in brackets (0 = OK, 1 = Cancel)
+function New-UiOkCancelRow {
+    param($Box, [int]$Button)
+    $o = if ($Button -eq 0) { '[ OK ]' } else { '  OK  ' }
+    $c = if ($Button -eq 1) { '[ Cancel ]' } else { '  Cancel  ' }
+    $txt  = "$o    $c"
+    $left = [Math]::Max(0, [int](($Box.InW - $txt.Length) / 2))
+    return (New-UiInnerRow $Box ((' ' * $left) + $txt) $Global:UiTitleFg $Global:UiBoxBg)
+}
+
 # -------------------------------------------------------------------------
 # msgbox   -> returns 0 (ok) or 255 (ESC)
 # -------------------------------------------------------------------------
@@ -284,13 +390,13 @@ function Show-UiMsgBox {
 }
 
 # -------------------------------------------------------------------------
-# yesno    -> returns 0 (yes) / 1 (no) / 255 (ESC)
+# yesno    -> returns 0 (yes) / 1 (no) / 255 (ESC), -DefaultNo preselects "no"
 # -------------------------------------------------------------------------
 function Show-UiYesNo {
-    param([string]$Text, [string]$YesLabel = 'Yes', [string]$NoLabel = 'No')
+    param([string]$Text, [string]$YesLabel = 'Yes', [string]$NoLabel = 'No', [switch]$DefaultNo)
     Clear-Host
     $Global:UiFrameHeight = 0
-    $cur = 0
+    $cur = if ($DefaultNo) { 1 } else { 0 }
     while ($true) {
         $box  = Get-UiBoxSize
         $rows = New-Object System.Collections.Generic.List[object]
@@ -326,6 +432,46 @@ function Show-UiYesNo {
 }
 
 # -------------------------------------------------------------------------
+# inputbox -> returns [PSCustomObject] Cancelled / Value
+# -------------------------------------------------------------------------
+function Show-UiInputBox {
+    param([string]$Text, [int]$MaxLength = 40)
+    Clear-Host
+    $Global:UiFrameHeight = 0
+    $value = ''
+    $btn   = 0
+    while ($true) {
+        $box  = Get-UiBoxSize
+        $rows = New-Object System.Collections.Generic.List[object]
+        $rows.Add((New-UiInnerRow $box ''))
+        foreach ($l in (Split-UiText $Text ($box.InW - 2))) {
+            $rows.Add((New-UiInnerRow $box (' ' + $l)))
+        }
+        $rows.Add((New-UiInnerRow $box ''))
+        $rows.Add((New-UiInnerRow $box ('  > ' + $value + '_') $Global:UiSelFg $Global:UiSelBg))
+        while ($rows.Count -lt ($box.InH - 3)) { $rows.Add((New-UiInnerRow $box '')) }
+        $rows.Add((New-UiOkCancelRow $box $btn))
+        $rows.Add((New-UiInnerRow $box ''))
+        $rows.Add((New-UiInnerRow $box '  [BACKSPACE] delete  [TAB] OK/Cancel  [ENTER] confirm  [ESC] cancel' $Global:UiFrameFg $Global:UiBoxBg))
+        Write-UiFrame (Build-UiFrame $box $Global:global_title $rows)
+
+        $key = Read-UiKey
+        switch ($key.VirtualKeyCode) {
+            $Global:UiKeyEsc   { Clear-Host; return [PSCustomObject]@{ Cancelled = $true;  Value = '' } }
+            $Global:UiKeyEnter { Clear-Host; return [PSCustomObject]@{ Cancelled = ($btn -eq 1); Value = $value } }
+            9  { $btn = 1 - $btn }    # tab
+            37 { $btn = 0 }           # left
+            39 { $btn = 1 }           # right
+            8 { if ($value.Length -gt 0) { $value = $value.Substring(0, $value.Length - 1) } }    # backspace
+            default {
+                $c = [int][char]$key.Character
+                if ($c -ge 32 -and $c -lt 127 -and $value.Length -lt $MaxLength) { $value += [char]$c }
+            }
+        }
+    }
+}
+
+# -------------------------------------------------------------------------
 # radiolist -> returns [PSCustomObject] Cancelled / Tag
 # Items: objects with .Tag, .Item, .On
 # -------------------------------------------------------------------------
@@ -338,6 +484,7 @@ function Show-UiRadioList {
     $set = 0
     for ($i = 0; $i -lt $list.Count; $i++) { if ($list[$i].On) { $set = $i; $cur = $i; break } }
     $top = 0
+    $btn = 0
 
     while ($true) {
         $box  = Get-UiBoxSize
@@ -364,9 +511,9 @@ function Show-UiRadioList {
             }
         }
         while ($rows.Count -lt ($box.InH - 3)) { $rows.Add((New-UiInnerRow $box '')) }
-        $rows.Add((New-UiButtonRow $box @('< OK >', '<Cancel>')))
+        $rows.Add((New-UiOkCancelRow $box $btn))
         $rows.Add((New-UiInnerRow $box ''))
-        $rows.Add((New-UiInnerRow $box '  [UP/DOWN] move   [SPACE] select   [ENTER] OK   [ESC] cancel' $Global:UiFrameFg $Global:UiBoxBg))
+        $rows.Add((New-UiInnerRow $box '  [UP/DOWN] move  [SPACE] select  [TAB] OK/Cancel  [ENTER] confirm' $Global:UiFrameFg $Global:UiBoxBg))
         Write-UiFrame (Build-UiFrame $box $Global:global_title $rows)
 
         $key = Read-UiKey
@@ -377,7 +524,15 @@ function Show-UiRadioList {
             $Global:UiKeyHome  { $cur = 0 }
             $Global:UiKeyEnd   { $cur = $list.Count - 1 }
             $Global:UiKeySpace { $set = $cur }
-            $Global:UiKeyEnter { $set = $cur; Clear-Host; return [PSCustomObject]@{ Cancelled = $false; Tag = $list[$set].Tag } }
+            $Global:UiKeyEnter {
+                Clear-Host
+                if ($btn -eq 1) { return [PSCustomObject]@{ Cancelled = $true; Tag = $null } }
+                $set = $cur
+                return [PSCustomObject]@{ Cancelled = $false; Tag = $list[$set].Tag }
+            }
+            9  { $btn = 1 - $btn }    # tab
+            37 { $btn = 0 }           # left
+            39 { $btn = 1 }           # right
         }
     }
 }
@@ -398,6 +553,7 @@ function Show-UiCheckList {
     for ($i = 0; $i -lt $list.Count; $i++) { $state[$i] = [bool]$list[$i].On }
     $cur = 0
     $top = 0
+    $btn = 0
 
     while ($true) {
         $box   = Get-UiBoxSize
@@ -426,9 +582,9 @@ function Show-UiCheckList {
             }
         }
         while ($rows.Count -lt ($box.InH - 3)) { $rows.Add((New-UiInnerRow $box '')) }
-        $rows.Add((New-UiButtonRow $box @('< OK >', '<Cancel>')))
+        $rows.Add((New-UiOkCancelRow $box $btn))
         $rows.Add((New-UiInnerRow $box ''))
-        $rows.Add((New-UiInnerRow $box '  [SPACE] toggle  [A] all  [N] none  [ENTER] OK  [ESC] cancel' $Global:UiFrameFg $Global:UiBoxBg))
+        $rows.Add((New-UiInnerRow $box '  [SPACE] toggle  [A] all  [N] none  [TAB] OK/Cancel  [ENTER] confirm' $Global:UiFrameFg $Global:UiBoxBg))
         Write-UiFrame (Build-UiFrame $box $Global:global_title $rows)
 
         $key = Read-UiKey
@@ -441,7 +597,11 @@ function Show-UiCheckList {
             $Global:UiKeyHome  { $cur = 0 }
             $Global:UiKeyEnd   { $cur = $list.Count - 1 }
             $Global:UiKeySpace { $state[$cur] = -not $state[$cur] }
+            9  { $btn = 1 - $btn }    # tab
+            37 { $btn = 0 }           # left
+            39 { $btn = 1 }           # right
             $Global:UiKeyEnter {
+                if ($btn -eq 1) { Clear-Host; return [PSCustomObject]@{ Cancelled = $true; Tags = @() } }
                 $tags = @()
                 for ($i = 0; $i -lt $list.Count; $i++) { if ($state[$i]) { $tags += $list[$i].Tag } }
                 Clear-Host
@@ -465,7 +625,10 @@ function Show-UiTextBox {
     $Global:UiFrameHeight = 0
     $content = @()
     if (Test-Path -LiteralPath $Path) { $content = @(Get-Content -LiteralPath $Path) }
-    $top = 0
+    $top  = 0
+    $left = 0
+    $maxlen = 0
+    foreach ($l in $content) { if ("$l".Length -gt $maxlen) { $maxlen = "$l".Length } }
 
     while ($true) {
         $box   = Get-UiBoxSize
@@ -478,12 +641,14 @@ function Show-UiTextBox {
         $rows = New-Object System.Collections.Generic.List[object]
         $rows.Add((New-UiInnerRow $box ''))
         for ($i = $top; $i -lt [Math]::Min($top + $avail, $content.Count); $i++) {
-            $rows.Add((New-UiInnerRow $box (' ' + $content[$i])))
+            $line = "$($content[$i])"
+            if ($left -lt $line.Length) { $line = $line.Substring($left) } else { $line = '' }
+            $rows.Add((New-UiInnerRow $box (' ' + $line)))
         }
         while ($rows.Count -lt ($box.InH - 3)) { $rows.Add((New-UiInnerRow $box '')) }
         $rows.Add((New-UiButtonRow $box @("< $ExitLabel >")))
         $rows.Add((New-UiInnerRow $box ''))
-        $rows.Add((New-UiInnerRow $box "  [UP/DOWN/PGUP/PGDN] scroll   [ENTER] $ExitLabel   [ESC] cancel" $Global:UiFrameFg $Global:UiBoxBg))
+        $rows.Add((New-UiInnerRow $box "  [UP/DOWN/PGUP/PGDN/LEFT/RIGHT] scroll   [ENTER] $ExitLabel" $Global:UiFrameFg $Global:UiBoxBg))
         Write-UiFrame (Build-UiFrame $box $Global:global_title $rows)
 
         $key = Read-UiKey
@@ -496,6 +661,8 @@ function Show-UiTextBox {
             $Global:UiKeyPgDn  { $top += $avail }
             $Global:UiKeyHome  { $top = 0 }
             $Global:UiKeyEnd   { $top = $max }
+            37 { $left = [Math]::Max(0, $left - 10) }                                # left
+            39 { if ($left + $box.InW - 2 -lt $maxlen) { $left += 10 } }             # right
         }
     }
 }

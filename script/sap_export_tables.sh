@@ -1,4 +1,6 @@
 #!/bin/bash
+# global_* variables are exported by sap_tab_exp_imp.sh
+# shellcheck disable=SC2154
 # SAP(R) Table EXP/IMP for SystemCopy (c) Florian Lamml 2026
 # www.florian-lamml.de
 # Version 1.0 - Initial Release
@@ -23,89 +25,146 @@
 # Version 1.8.9 - New Template OAC0-NOTOA01
 # Version 1.9   - PowerShell Port for Windows
 # Version 1.9.1 - Correct VSCAN Template
+# Version 1.10  - Security Hardening (permissions, checksums, target check, backup, user and config check)
+# Version 2.0 - komplett überarbeitet mit neuen Funktionen und Sicherheitsoptionen
 
-# set config file and delete old one
-export selectedtablesforexport=$EXPIMPLOC/selected_tables_for_export.conf
-export exportedtables=$EXPIMPLOC/exported_tables.conf
-
-# check existing data
-if [ -e $selectedtablesforexport ]
+# the export script must be started by sap_tab_exp_imp.sh (config, checks, logfile)
+if [ -z "$EXPIMPLOC" ] || [ -z "$EXPIMPLOGFILE" ] || [ -z "$SHA256TOOL" ]
  then
-	dialog --title "$global_title" --backtitle "$global_backtitle"  --yes-label "Continue" --no-label "Exit" --yesno  "There are export files in $EXPIMPLOC\nIf you continue these files will be deleted!" $global_height $global_width 
+	echo "This script must be started by sap_tab_exp_imp.sh!"
+	echo "... EXIT NOW"
+	exit 90
+fi
+
+# helper functions (checksums, files of a previous run)
+# shellcheck source=script/sap_expimp_lib.sh
+. "$(dirname "$0")/sap_expimp_lib.sh"
+
+# set config file
+selectedtablesforexport=$EXPIMPLOC/selected_tables_for_export.conf
+exportedtables=$EXPIMPLOC/exported_tables.conf
+
+# check existing data of a previous run - copy it to a backup directory before it is deleted
+OLDRUNFILES=$(expimp_run_files)
+if [ -n "$OLDRUNFILES" ]
+ then
+	BACKUPDIR=$EXPIMPLOC/backup/$(date "+%Y%m%d_%H%M%S")
+	BACKUPKEEPINFO=""
+	[ "$BACKUPKEEP" -gt 0 ] && BACKUPKEEPINFO="\n\nOnly the newest $BACKUPKEEP backups are kept (BACKUPKEEP),\nolder backups will be deleted!"
+	expimp_dialog --title "$global_title" --backtitle "$global_backtitle"  --yes-label "Continue" --no-label "Exit" --yesno  "There are files of a previous run in $EXPIMPLOC\n\nIf you continue these files will be copied to\n$BACKUPDIR\nand then deleted!$BACKUPKEEPINFO" @H@ @W@
 	CONTINUE=$?
-	for choice in $CONTINUE
-	do
-		case $choice in
-			0)
-				echo "INFO: delete old files" >> $EXPIMPLOGFILE
-				rm $selectedtablesforexport
-				[ -e $exportedtables ] && rm $exportedtables
-				;;
-			1)
-				echo "INFO: exit because old run detected" >> $EXPIMPLOGFILE
-				exit 10
-				;;
-			# check ESC hit
-			255)	
-				echo "INFO: exit because old run (ESC hit)" >> $EXPIMPLOGFILE
-				exit 10
-				;;
-		esac
-	done
+	case $CONTINUE in
+		0)
+			echo "INFO: backup old files to $BACKUPDIR" >> "$EXPIMPLOGFILE"
+			if ! mkdir -p "$BACKUPDIR" || ! echo "$OLDRUNFILES" | while IFS= read -r OLDFILE; do cp -p "$OLDFILE" "$BACKUPDIR/" || exit 1; done
+			 then
+				echo "ERROR: backup of the previous run to $BACKUPDIR failed, nothing deleted" >> "$EXPIMPLOGFILE"
+				exit 15
+			fi
+			# the info files in the backup show the backup directory as location
+			for INFOFILE in "$BACKUPDIR/exported_tables.conf" "$BACKUPDIR/imported_tables.conf"
+			do
+			 [ -f "$INFOFILE" ] || continue
+			 awk -v d="$BACKUPDIR" '{ if (prev == "# Exported to:" || prev == "# Imported from:") print "# " d; else print; prev = $0 }' "$INFOFILE" > "$INFOFILE.tmp" && mv "$INFOFILE.tmp" "$INFOFILE"
+			done
+			echo "INFO: delete old files" >> "$EXPIMPLOGFILE"
+			echo "$OLDRUNFILES" | while IFS= read -r OLDFILE; do rm -f "$OLDFILE"; done
+			# keep only the newest BACKUPKEEP backups (0 = unlimited)
+			if [ "$BACKUPKEEP" -gt 0 ]
+			 then
+				OLDBACKUPS=()
+				for OLDBACKUP in "$EXPIMPLOC"/backup/[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]_[0-9][0-9][0-9][0-9][0-9][0-9]
+				do
+				 [ -d "$OLDBACKUP" ] && OLDBACKUPS+=("$OLDBACKUP")
+				done
+				OLDBACKUPNR=0
+				while [ "$OLDBACKUPNR" -lt $((${#OLDBACKUPS[@]} - BACKUPKEEP)) ]
+				do
+				 if rm -rf "${OLDBACKUPS[$OLDBACKUPNR]}"
+				  then
+					echo "INFO: delete old backup ${OLDBACKUPS[$OLDBACKUPNR]} (BACKUPKEEP=$BACKUPKEEP)" >> "$EXPIMPLOGFILE"
+				 else
+					echo "WARNING: cannot delete old backup ${OLDBACKUPS[$OLDBACKUPNR]}" >> "$EXPIMPLOGFILE"
+				 fi
+				 OLDBACKUPNR=$((OLDBACKUPNR + 1))
+				done
+			fi
+			;;
+		1)
+			echo "INFO: exit because old run detected" >> "$EXPIMPLOGFILE"
+			exit 10
+			;;
+		# check ESC hit
+		*)	
+			echo "INFO: exit because old run (ESC hit)" >> "$EXPIMPLOGFILE"
+			exit 10
+			;;
+	esac
 fi
  
 # search templates
-TEMPLATECOUNTER=0
-TEMPLATES=$global_pwd/templates/*
-for TEMPLATES in $TEMPLATES
+TEMPLATELIST=()
+for TEMPLATEFILE in "$global_pwd"/templates/*
 do
-  TEMPLATECOUNTER=$(expr $TEMPLATECOUNTER + 1)
-  TEMPLATE=$(echo "$TEMPLATES" | awk -F/ '{ printf $NF"\n" }')
-  TEMPLATE[$TEMPLATECOUNTER]="$TEMPLATE $TEMPLATE off"
+  [ -f "$TEMPLATEFILE" ] || continue
+  TEMPLATE=${TEMPLATEFILE##*/}
+  # empty templates (no statements) are marked, they are skipped by the export
+  if grep -q '[^[:space:]]' "$TEMPLATEFILE"
+   then
+	TEMPLATELIST+=("$TEMPLATE" "$TEMPLATE" off)
+  else
+	TEMPLATELIST+=("$TEMPLATE" "$TEMPLATE (empty)" off)
+  fi
 done
 
-# selet the templates
-dialog --title "$global_title" --backtitle "$global_backtitle" --separate-output --checklist "Select the Templates for Export:" $global_height $global_width $global_list ${TEMPLATE[@]:1:$TEMPLATECOUNTER} 2> $selectedtablesforexport
-if [ $? -ne 0 ]
+# select the templates
+if ! expimp_dialog --title "$global_title" --backtitle "$global_backtitle" --separate-output --checklist "Select the Templates for Export:" @H@ @W@ @L@ "${TEMPLATELIST[@]}" > "$selectedtablesforexport"
  then
-    echo "ERROR: fail to select templates for export" >> $EXPIMPLOGFILE
+    echo "ERROR: fail to select templates for export" >> "$EXPIMPLOGFILE"
+	rm -f "$selectedtablesforexport"
 	exit 11
 fi 
 clear
-if [ $(cat $selectedtablesforexport | wc -l) -eq 0 ]
+if [ ! -s "$selectedtablesforexport" ]
  then 
-	echo "ERROR: no template selected for export" >> $EXPIMPLOGFILE
+	echo "ERROR: no template selected for export" >> "$EXPIMPLOGFILE"
+	rm -f "$selectedtablesforexport"
 	exit 12
 fi
 
-if [ $OS == Linux ]
+if [ "$OS" = Linux ]
  then
-  export listcleaner=$EXPIMPLOC/listcleaner.conf
-  sed 's/\"//g' $selectedtablesforexport >> $listcleaner
-  mv $listcleaner $selectedtablesforexport
+  listcleaner=$EXPIMPLOC/listcleaner.conf
+  sed 's/\"//g' "$selectedtablesforexport" > "$listcleaner"
+  mv "$listcleaner" "$selectedtablesforexport"
 fi
 
 # logfile info
-echo "=== selected tables for export ===" >> $EXPIMPLOGFILE
-cat $selectedtablesforexport >> $EXPIMPLOGFILE
-echo "=== selected tables for export ===" >> $EXPIMPLOGFILE
+{
+ echo "=== selected tables for export ==="
+ cat "$selectedtablesforexport"
+ echo "=== selected tables for export ==="
+} >> "$EXPIMPLOGFILE"
 
-# delete old exports
-rm $EXPIMPLOC/*.tpl > /dev/null 2>&1
-rm $EXPIMPLOC/*.exp.log > /dev/null 2>&1
-rm $EXPIMPLOC/*.dat > /dev/null 2>&1
-
-# info file
-echo "# Template name | Return Code of Export" >> $exportedtables
-echo "# =====================================" >> $exportedtables
-echo "# Exported to:" >> $exportedtables
-echo "# "$EXPIMPLOC >> $exportedtables
-echo "# =====================================" >> $exportedtables
+# info file (with metadata of the source system - checked by the import)
+{
+ echo "# Template name | Return Code of Export | SHA-256 of the data file"
+ echo "# ====================================="
+ echo "# Exported to:"
+ echo "# $EXPIMPLOC"
+ echo "# ====================================="
+ echo "# SID=$SAPSYSTEMNAME"
+ echo "# HOST=$(hostname)"
+ echo "# CLIENT=$EXPCLIENT"
+ echo "# USER=$CURUSER"
+ echo "# DATE=$(date "+%Y-%m-%d %H:%M:%S")"
+ echo "# ====================================="
+} > "$exportedtables"
 
 # check STMS_QA export
-if [ $(grep STMS_QA $selectedtablesforexport | wc -l) -ge 1 ]
+if grep -qx STMS_QA "$selectedtablesforexport"
 then
- dialog --title "$global_title" --backtitle "$global_backtitle" --exit-label "Continue" --msgbox "You are going to export STMS_QA \n\n Please refresh STMS_QA before continue" $global_height $global_width
+ expimp_dialog --title "$global_title" --backtitle "$global_backtitle" --ok-label "Continue" --msgbox "You are going to export STMS_QA \n\n Please refresh STMS_QA before continue" @H@ @W@
  # check ESC hit
  if [ $? -eq 255 ];
  then
@@ -113,46 +172,74 @@ then
  fi
 fi
 
-# export and export dialog
-dialog --title "$global_title" --backtitle "$global_backtitle" --progressbox "Export SAP Tables"  $global_height $global_width < <(
-while read SELTABLES
+# export and export dialog (with progress: number of the template / number of templates)
+EXPTOTAL=$(grep -c . "$selectedtablesforexport")
+expimp_progressbox "Export SAP Tables ($EXPTOTAL templates)" < <(
+EXPNR=0
+while IFS= read -r SELTABLES
 do
- echo "export" >> $EXPIMPLOC/$SELTABLES.tpl
- echo "client = "$EXPCLIENT"" >> $EXPIMPLOC/$SELTABLES.tpl
- if [ "${PARALLEL}" -ne 0 ]; then
-  echo "parallel = "$PARALLEL >> $EXPIMPLOC/$SELTABLES.tpl
+ EXPNR=$((EXPNR + 1))
+ echo "=== Export $EXPNR/$EXPTOTAL: $SELTABLES ==="
+ if [ ! -f "$global_pwd/templates/$SELTABLES" ]
+  then
+	echo "=== Export SKIPPED $SELTABLES (template missing) ==="
+	echo "$SELTABLES|RC=TEMPLATE_MISSING|SHA256=" >> "$exportedtables"
+	echo "=== $(expimp_progress_bar "$EXPNR" "$EXPTOTAL") done ==="
+	echo ""
+	continue
  fi
- echo "file = '"$EXPIMPLOC"/"$SELTABLES".dat'" >> $EXPIMPLOC/$SELTABLES.tpl
- cat $global_pwd/templates/$SELTABLES >> $EXPIMPLOC/$SELTABLES.tpl
- echo "=== Export START" $SELTABLES "==="
- R3trans -w $EXPIMPLOC/$SELTABLES.exp.log $EXPIMPLOC/$SELTABLES.tpl
- echo $SELTABLES"|RC="$? >> $exportedtables
- echo "=== Export END" $SELTABLES "==="
+ if ! grep -q '[^[:space:]]' "$global_pwd/templates/$SELTABLES"
+  then
+	echo "=== Export SKIPPED $SELTABLES (template empty) ==="
+	echo "$SELTABLES|RC=TEMPLATE_EMPTY|SHA256=" >> "$exportedtables"
+	echo "=== $(expimp_progress_bar "$EXPNR" "$EXPTOTAL") done ==="
+	echo ""
+	continue
+ fi
+ {
+  echo "export"
+  echo "client = $EXPCLIENT"
+  [ "$PARALLEL" -ne 0 ] && echo "parallel = $PARALLEL"
+  echo "file = '$EXPIMPLOC/$SELTABLES.dat'"
+  # every line with a line break (also the last line of a template without one)
+  awk '1' "$global_pwd/templates/$SELTABLES"
+ } > "$EXPIMPLOC/$SELTABLES.tpl"
+ # R3trans error output is shown in the progress box too
+ R3trans -w "$EXPIMPLOC/$SELTABLES.exp.log" "$EXPIMPLOC/$SELTABLES.tpl" 2>&1
+ EXPRC=$?
+ EXPSHA256=""
+ [ -f "$EXPIMPLOC/$SELTABLES.dat" ] && EXPSHA256=$(expimp_sha256 "$EXPIMPLOC/$SELTABLES.dat")
+ echo "$SELTABLES|RC=$EXPRC|SHA256=$EXPSHA256" >> "$exportedtables"
+ echo "=== Export END $SELTABLES (RC=$EXPRC) ==="
+ echo "=== $(expimp_progress_bar "$EXPNR" "$EXPTOTAL") done ==="
  echo ""
  sleep 1
-done < $selectedtablesforexport
-if [ $? -ne 0 ]
- then
-	echo "ERROR: error while export" >> $EXPIMPLOGFILE
-	exit 13
-fi 
-echo "# =====================================" >> $exportedtables
-clear
+done < "$selectedtablesforexport"
+echo "# =====================================" >> "$exportedtables"
 )
 
 # logfile info
-echo "=== exported tables ===" >> $EXPIMPLOGFILE
-cat $exportedtables >> $EXPIMPLOGFILE
-echo "=== exported tables ===" >> $EXPIMPLOGFILE
+{
+ echo "=== exported tables ==="
+ cat "$exportedtables"
+ echo "=== exported tables ==="
+} >> "$EXPIMPLOGFILE"
 
 # export info
-dialog --title "$global_title" --backtitle "$global_backtitle" --exit-label "Continue" --textbox $exportedtables $global_height $global_width
-if [ $? -ne 0 ]
+if ! expimp_dialog --title "$global_title" --backtitle "$global_backtitle" --exit-label "Continue" --textbox "$exportedtables" @H@ @W@
  then
-	echo "ERROR: export info error" >> $EXPIMPLOGFILE
+	echo "ERROR: export info error" >> "$EXPIMPLOGFILE"
 	exit 14
 fi 
 clear
 
-echo "=== export finished ===" >> $EXPIMPLOGFILE
+# highest return code of R3trans (RC >= 8 or a missing template is an error, an empty template is not)
+EXPMAXRC=$(awk -F'|' '!/^#/ && NF > 1 { rc = $2; sub(/^RC=/, "", rc); if (rc == "TEMPLATE_EMPTY") rc = 0; else if (rc !~ /^[0-9]+$/) rc = 12; if (rc + 0 > max) max = rc + 0 } END { print max + 0 }' "$exportedtables")
+if [ "$EXPMAXRC" -ge 8 ]
+ then
+	echo "ERROR: error while export (highest RC=$EXPMAXRC, see exported tables)" >> "$EXPIMPLOGFILE"
+	exit 13
+fi
+
+echo "=== export finished ===" >> "$EXPIMPLOGFILE"
 exit 0

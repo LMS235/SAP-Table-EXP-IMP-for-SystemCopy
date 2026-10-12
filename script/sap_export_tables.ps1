@@ -22,12 +22,17 @@
 # Version 1.8.9 - New Template OAC0-NOTOA01
 # Version 1.9   - PowerShell Port for Windows
 # Version 1.9.1 - Correct VSCAN Template
+# Version 1.10  - Security Hardening (permissions, checksums, target check, backup, user and config check)
+# Version 2.0 - komplett überarbeitet mit neuen Funktionen und Sicherheitsoptionen
 
 $ErrorActionPreference = 'Stop'
 
-# the console UI is already loaded by the main script, load it again if called directly
-if (-not (Get-Command 'Show-UiCheckList' -ErrorAction SilentlyContinue)) {
-    . (Join-Path $PSScriptRoot 'sap_expimp_ui.ps1')
+# the export script must be started by sap_tab_exp_imp.ps1 (config, checks, logfile, console UI)
+if (-not $Global:EXPIMPRUNNING -or -not $Global:EXPIMPLOC -or -not $Global:EXPIMPLOGFILE -or
+    -not (Get-Command 'Show-UiCheckList' -ErrorAction SilentlyContinue)) {
+    Write-Host 'This script must be started by sap_tab_exp_imp.ps1!'
+    Write-Host '... EXIT NOW'
+    exit 90
 }
 
 # R3trans control files must be plain ASCII without BOM
@@ -41,21 +46,56 @@ $selectedtablesforexport = Join-Path $Global:EXPIMPLOC 'selected_tables_for_expo
 $exportedtables          = Join-Path $Global:EXPIMPLOC 'exported_tables.conf'
 $templatedir             = Join-Path $Global:global_pwd 'templates'
 
-# check existing data
-if (Test-Path -LiteralPath $selectedtablesforexport) {
-    $continue = Show-UiYesNo -Text "There are export files in $($Global:EXPIMPLOC)`nIf you continue these files will be deleted!" -YesLabel 'Continue' -NoLabel 'Exit'
+# check existing data of a previous run - copy it to a backup directory before it is deleted
+$oldrunfiles = @(Get-ExpImpRunFiles)
+if ($oldrunfiles.Count -gt 0) {
+    $backupdir = Join-Path (Join-Path $Global:EXPIMPLOC 'backup') (Get-Date -Format 'yyyyMMdd_HHmmss')
+    $backupkeepinfo = ''
+    if ($Global:BACKUPKEEP -gt 0) { $backupkeepinfo = "`n`nOnly the newest $($Global:BACKUPKEEP) backups are kept (BACKUPKEEP),`nolder backups will be deleted!" }
+    $continue = Show-UiYesNo -Text "There are files of a previous run in $($Global:EXPIMPLOC)`n`nIf you continue these files will be copied to`n$backupdir`nand then deleted!$backupkeepinfo" -YesLabel 'Continue' -NoLabel 'Exit'
     switch ($continue) {
         0 {
+            Write-ExpImpLog "INFO: backup old files to $backupdir"
+            try {
+                $null = New-Item -ItemType Directory -Path $backupdir -Force
+                foreach ($f in $oldrunfiles) { Copy-Item -LiteralPath $f.FullName -Destination $backupdir -Force }
+                # the info files in the backup show the backup directory as location
+                foreach ($infoname in 'exported_tables.conf', 'imported_tables.conf') {
+                    $infofile = Join-Path $backupdir $infoname
+                    if (-not (Test-Path -LiteralPath $infofile)) { continue }
+                    $prev = ''
+                    $info = foreach ($line in @(Get-Content -LiteralPath $infofile)) {
+                        if ($prev -eq '# Exported to:' -or $prev -eq '# Imported from:') { '# ' + $backupdir } else { $line }
+                        $prev = $line
+                    }
+                    Write-AsciiFile -Path $infofile -Lines @($info)
+                }
+            } catch {
+                Write-ExpImpLog "ERROR: backup of the previous run to $backupdir failed, nothing deleted ($($_.Exception.Message))"
+                exit 15
+            }
             Write-ExpImpLog 'INFO: delete old files'
-            Remove-Item -LiteralPath $selectedtablesforexport -Force
-            if (Test-Path -LiteralPath $exportedtables) { Remove-Item -LiteralPath $exportedtables -Force }
+            foreach ($f in $oldrunfiles) { Remove-Item -LiteralPath $f.FullName -Force }
+            # keep only the newest BACKUPKEEP backups (0 = unlimited)
+            if ($Global:BACKUPKEEP -gt 0) {
+                $oldbackups = @(Get-ChildItem -LiteralPath (Join-Path $Global:EXPIMPLOC 'backup') -Directory |
+                    Where-Object { $_.Name -match '^[0-9]{8}_[0-9]{6}\z' } | Sort-Object Name)
+                for ($i = 0; $i -lt ($oldbackups.Count - $Global:BACKUPKEEP); $i++) {
+                    try {
+                        Remove-Item -LiteralPath $oldbackups[$i].FullName -Recurse -Force
+                        Write-ExpImpLog "INFO: delete old backup $($oldbackups[$i].FullName) (BACKUPKEEP=$($Global:BACKUPKEEP))"
+                    } catch {
+                        Write-ExpImpLog "WARNING: cannot delete old backup $($oldbackups[$i].FullName)"
+                    }
+                }
+            }
         }
         1 {
             Write-ExpImpLog 'INFO: exit because old run detected'
             exit 10
         }
         # check ESC hit
-        255 {
+        default {
             Write-ExpImpLog 'INFO: exit because old run (ESC hit)'
             exit 10
         }
@@ -65,7 +105,10 @@ if (Test-Path -LiteralPath $selectedtablesforexport) {
 # search templates
 $templates = @(Get-ChildItem -LiteralPath $templatedir -File | Sort-Object Name)
 $items = @($templates | ForEach-Object {
-    [PSCustomObject]@{ Tag = $_.Name; Item = $_.Name; On = $false }
+    # empty templates (no statements) are marked, they are skipped by the export
+    $name = $_.Name
+    if (-not (@(Get-Content -LiteralPath $_.FullName) -match '\S')) { $name = "$name (empty)" }
+    [PSCustomObject]@{ Tag = $_.Name; Item = $name; On = $false }
 })
 
 # select the templates
@@ -74,11 +117,13 @@ $seltables = @($selection.Tags)
 Write-AsciiFile -Path $selectedtablesforexport -Lines $seltables
 if ($selection.Cancelled) {
     Write-ExpImpLog 'ERROR: fail to select templates for export'
+    Remove-Item -LiteralPath $selectedtablesforexport -Force -ErrorAction SilentlyContinue
     exit 11
 }
 Clear-Host
 if ($seltables.Count -eq 0) {
     Write-ExpImpLog 'ERROR: no template selected for export'
+    Remove-Item -LiteralPath $selectedtablesforexport -Force -ErrorAction SilentlyContinue
     exit 12
 }
 
@@ -87,17 +132,18 @@ Write-ExpImpLog '=== selected tables for export ==='
 foreach ($t in $seltables) { Write-ExpImpLog $t }
 Write-ExpImpLog '=== selected tables for export ==='
 
-# delete old exports
-Get-ChildItem -LiteralPath $Global:EXPIMPLOC -Filter '*.tpl'     -File -ErrorAction SilentlyContinue | Remove-Item -Force -ErrorAction SilentlyContinue
-Get-ChildItem -LiteralPath $Global:EXPIMPLOC -Filter '*.exp.log' -File -ErrorAction SilentlyContinue | Remove-Item -Force -ErrorAction SilentlyContinue
-Get-ChildItem -LiteralPath $Global:EXPIMPLOC -Filter '*.dat'     -File -ErrorAction SilentlyContinue | Remove-Item -Force -ErrorAction SilentlyContinue
-
-# info file
+# info file (with metadata of the source system - checked by the import)
 Write-AsciiFile -Path $exportedtables -Lines @(
-    '# Template name | Return Code of Export'
+    '# Template name | Return Code of Export | SHA-256 of the data file'
     '# ====================================='
     '# Exported to:'
     ('# ' + $Global:EXPIMPLOC)
+    '# ====================================='
+    ('# SID=' + $env:SAPSYSTEMNAME)
+    ('# HOST=' + [Environment]::MachineName)
+    ('# CLIENT=' + $Global:EXPCLIENT)
+    ('# USER=' + $Global:CURUSER)
+    ('# DATE=' + (Get-Date -Format 'yyyy-MM-dd HH:mm:ss'))
     '# ====================================='
 )
 
@@ -110,8 +156,28 @@ if ($seltables -contains 'STMS_QA') {
 
 # export and export dialog
 try {
-    Start-UiProgressView -Text 'Export SAP Tables'
+    # progress: number of the template / number of templates
+    $exptotal = $seltables.Count
+    $expnr    = 0
+    Start-UiProgressView -Text "Export SAP Tables ($exptotal templates)"
     foreach ($SELTABLES in $seltables) {
+        $expnr++
+        Write-Host "=== Export $expnr/$exptotal`: $SELTABLES ===" -ForegroundColor Cyan
+        $templatefile = Join-Path $templatedir $SELTABLES
+        if (-not (Test-Path -LiteralPath $templatefile)) {
+            Write-Host "=== Export SKIPPED $SELTABLES (template missing) ===" -ForegroundColor Yellow
+            Write-Host "=== $(Get-ExpImpProgressBar -Current $expnr -Total $exptotal) done ===" -ForegroundColor Green
+            Write-Host ''
+            Add-Content -LiteralPath $exportedtables -Value "$SELTABLES|RC=TEMPLATE_MISSING|SHA256=" -Encoding ascii
+            continue
+        }
+        if (-not (@(Get-Content -LiteralPath $templatefile) -match '\S')) {
+            Write-Host "=== Export SKIPPED $SELTABLES (template empty) ===" -ForegroundColor Yellow
+            Write-Host "=== $(Get-ExpImpProgressBar -Current $expnr -Total $exptotal) done ===" -ForegroundColor Green
+            Write-Host ''
+            Add-Content -LiteralPath $exportedtables -Value "$SELTABLES|RC=TEMPLATE_EMPTY|SHA256=" -Encoding ascii
+            continue
+        }
         $tplfile = Join-Path $Global:EXPIMPLOC "$SELTABLES.tpl"
         $datfile = Join-Path $Global:EXPIMPLOC "$SELTABLES.dat"
         $logfile = Join-Path $Global:EXPIMPLOC "$SELTABLES.exp.log"
@@ -123,12 +189,11 @@ try {
             $tpl.Add("parallel = $($Global:PARALLEL)")
         }
         $tpl.Add("file = '$datfile'")
-        foreach ($line in @(Get-Content -LiteralPath (Join-Path $templatedir $SELTABLES) -ErrorAction SilentlyContinue)) {
+        foreach ($line in @(Get-Content -LiteralPath $templatefile)) {
             $tpl.Add($line)
         }
         Write-AsciiFile -Path $tplfile -Lines $tpl.ToArray()
 
-        Write-Host "=== Export START $SELTABLES ===" -ForegroundColor Cyan
         # R3trans writes warnings to stderr - '2>&1' would raise a terminating
         # error under $ErrorActionPreference = 'Stop' (Windows PowerShell 5.1)
         $prevEap = $ErrorActionPreference
@@ -139,8 +204,11 @@ try {
         } finally {
             $ErrorActionPreference = $prevEap
         }
-        Add-Content -LiteralPath $exportedtables -Value "$SELTABLES|RC=$rc" -Encoding ascii
-        Write-Host "=== Export END $SELTABLES ===" -ForegroundColor Cyan
+        $sha256 = ''
+        if (Test-Path -LiteralPath $datfile) { $sha256 = Get-ExpImpSha256 -Path $datfile }
+        Add-Content -LiteralPath $exportedtables -Value "$SELTABLES|RC=$rc|SHA256=$sha256" -Encoding ascii
+        Write-Host "=== Export END $SELTABLES (RC=$rc) ===" -ForegroundColor Cyan
+        Write-Host "=== $(Get-ExpImpProgressBar -Current $expnr -Total $exptotal) done ===" -ForegroundColor Green
         Write-Host ''
         Start-Sleep -Seconds 1
     }
@@ -163,6 +231,13 @@ if ($rc -ne 0) {
     exit 14
 }
 Clear-Host
+
+# highest return code of R3trans (RC >= 8 or a missing template is an error, an empty template is not)
+$maxrc = Get-ExpImpMaxRc -Path $exportedtables
+if ($maxrc -ge 8) {
+    Write-ExpImpLog "ERROR: error while export (highest RC=$maxrc, see exported tables)"
+    exit 13
+}
 
 Write-ExpImpLog '=== export finished ==='
 exit 0

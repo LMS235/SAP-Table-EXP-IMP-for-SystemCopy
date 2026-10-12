@@ -22,12 +22,17 @@
 # Version 1.8.9 - New Template OAC0-NOTOA01
 # Version 1.9   - PowerShell Port for Windows
 # Version 1.9.1 - Correct VSCAN Template
+# Version 1.10  - Security Hardening (permissions, checksums, target check, backup, user and config check)
+# Version 2.0 - komplett überarbeitet mit neuen Funktionen und Sicherheitsoptionen
 
 $ErrorActionPreference = 'Stop'
 
-# the console UI is already loaded by the main script, load it again if called directly
-if (-not (Get-Command 'Show-UiCheckList' -ErrorAction SilentlyContinue)) {
-    . (Join-Path $PSScriptRoot 'sap_expimp_ui.ps1')
+# the import script must be started by sap_tab_exp_imp.ps1 (config, checks, logfile, console UI)
+if (-not $Global:EXPIMPRUNNING -or -not $Global:EXPIMPLOC -or -not $Global:EXPIMPLOGFILE -or
+    -not (Get-Command 'Show-UiCheckList' -ErrorAction SilentlyContinue)) {
+    Write-Host 'This script must be started by sap_tab_exp_imp.ps1!'
+    Write-Host '... EXIT NOW'
+    exit 90
 }
 
 function Write-AsciiFile {
@@ -35,19 +40,57 @@ function Write-AsciiFile {
     [System.IO.File]::WriteAllLines($Path, [string[]]$Lines, (New-Object System.Text.ASCIIEncoding))
 }
 
-# set config file and delete old one
-$exportedtables = Join-Path $Global:EXPIMPLOC 'exported_tables.conf'
-if (-not (Test-Path -LiteralPath $exportedtables) -or @(Get-Content -LiteralPath $exportedtables).Count -eq 0) {
+# exports available for import: the current export and the backups of previous runs
+# (newest first - the backup directories are named by timestamp)
+function Test-ExpImpExport {
+    param([string]$Dir)
+    $f = Join-Path $Dir 'exported_tables.conf'
+    return ((Test-Path -LiteralPath $f) -and @(Get-Content -LiteralPath $f).Count -gt 0)
+}
+$impsrcdirs = @()
+if (Test-ExpImpExport $Global:EXPIMPLOC) { $impsrcdirs += $Global:EXPIMPLOC }
+$backuproot = Join-Path $Global:EXPIMPLOC 'backup'
+if (Test-Path -LiteralPath $backuproot) {
+    foreach ($d in @(Get-ChildItem -LiteralPath $backuproot -Directory | Sort-Object Name -Descending)) {
+        if (Test-ExpImpExport $d.FullName) { $impsrcdirs += $d.FullName }
+    }
+}
+if ($impsrcdirs.Count -eq 0) {
     Write-ExpImpLog 'ERROR: no exports found for import'
     exit 20
 }
 
+# select the export to import if there is more than one (default is the newest)
+$impsrc = $impsrcdirs[0]
+if ($impsrcdirs.Count -gt 1) {
+    $items = @()
+    for ($i = 0; $i -lt $impsrcdirs.Count; $i++) {
+        $d     = $impsrcdirs[$i]
+        $conf  = Join-Path $d 'exported_tables.conf'
+        $name  = if ($d -eq $Global:EXPIMPLOC) { 'current' } else { 'backup\' + (Split-Path $d -Leaf) }
+        $date  = Get-ExpImpMeta -Path $conf -Key 'DATE'; if (-not $date) { $date = 'unknown date' }
+        $sid   = Get-ExpImpMeta -Path $conf -Key 'SID';  if (-not $sid)  { $sid  = 'unknown' }
+        $count = @(Get-Content -LiteralPath $conf | Where-Object { $_ -match '\|RC=' }).Count
+        $items += [PSCustomObject]@{ Tag = $i; Item = "$name | $date | SID $sid | $count exports"; On = ($i -eq 0) }
+    }
+    $choice = Show-UiRadioList -Text 'Select the export to import (default is the newest):' -Items $items
+    if ($choice.Cancelled) {
+        Write-ExpImpLog 'INFO: no export selected for import'
+        exit 29
+    }
+    $impsrc = $impsrcdirs[[int]$choice.Tag]
+}
+Write-ExpImpLog "INFO: import from $impsrc"
+
 # set config file
-$exportedtablesok = Join-Path $Global:EXPIMPLOC 'exported_tables_ok.conf'
+$exportedtables = Join-Path $impsrc 'exported_tables.conf'
+
+# set config file
+$exportedtablesok = Join-Path $impsrc 'exported_tables_ok.conf'
 
 # check existing data
 if (Test-Path -LiteralPath $exportedtablesok) {
-    $continue = Show-UiYesNo -Text "There are import files in $($Global:EXPIMPLOC)`nIf you continue these files will be deleted!" -YesLabel 'Continue' -NoLabel 'Exit'
+    $continue = Show-UiYesNo -Text "There is the selection of a previous import in`n$($impsrc)`n`nIf you continue, this selection will be reset.`n(The export data is not changed.)" -YesLabel 'Continue' -NoLabel 'Exit'
     switch ($continue) {
         0 {
             Write-ExpImpLog 'INFO: delete old files'
@@ -78,7 +121,7 @@ if ($okexports.Count -eq 0) {
 Write-AsciiFile -Path $exportedtablesok -Lines $okexports
 
 # set config file and delete old one
-$importtables = Join-Path $Global:EXPIMPLOC 'selected_tables_import.conf'
+$importtables = Join-Path $impsrc 'selected_tables_import.conf'
 if (Test-Path -LiteralPath $importtables) { Remove-Item -LiteralPath $importtables -Force }
 
 # select exports to import
@@ -101,26 +144,123 @@ if ($seltables.Count -eq 0) {
     exit 24
 }
 
+# metadata of the source system (written by the export since version 1.10)
+$expsid    = Get-ExpImpMeta -Path $exportedtables -Key 'SID'
+$exphost   = Get-ExpImpMeta -Path $exportedtables -Key 'HOST'
+$expclient = Get-ExpImpMeta -Path $exportedtables -Key 'CLIENT'
+$expuser   = Get-ExpImpMeta -Path $exportedtables -Key 'USER'
+$expdate   = Get-ExpImpMeta -Path $exportedtables -Key 'DATE'
+$curhost   = [Environment]::MachineName
+function Get-OrUnknown { param([string]$Value) if ($Value) { return $Value } return 'unknown' }
+
+# list of the selected exports (PowerShell variables are case-insensitive:
+# the import loop variable $SELTABLES overwrites $seltables)
+$importlist = @($seltables)
+
+# verify the SHA-256 checksums of the selected exports
+Write-ExpImpLog '=== verify checksums ==='
+$checksumerror = @()
+$checksumerrorlist = ''
+foreach ($imptable in $importlist) {
+    $datfile = Join-Path $impsrc "$imptable.dat"
+    $expsha  = ''
+    foreach ($line in $okexports) {
+        $f = $line -split '\|'
+        if ($f[0] -eq $imptable) {
+            foreach ($field in $f) { if ($field.StartsWith('SHA256=')) { $expsha = $field.Substring(7) } }
+        }
+    }
+    if (-not $expsid) {
+        # export of an older version without metadata and checksums
+        Write-ExpImpLog "$imptable|NO CHECKSUM (export of an older version)"
+    } elseif (-not (Test-Path -LiteralPath $datfile)) {
+        Write-ExpImpLog "$imptable|ERROR data file missing"
+        $checksumerror += $imptable
+        $checksumerrorlist += "`n  $imptable (data file missing)"
+    } elseif (-not $expsha -or (Get-ExpImpSha256 -Path $datfile) -ne $expsha) {
+        Write-ExpImpLog "$imptable|ERROR checksum mismatch"
+        $checksumerror += $imptable
+        $checksumerrorlist += "`n  $imptable (checksum mismatch - data file changed)"
+    } else {
+        Write-ExpImpLog "$imptable|checksum OK"
+    }
+}
+Write-ExpImpLog '=== verify checksums ==='
+if ($checksumerror.Count -gt 0) {
+    Write-ExpImpLog "ERROR: checksum verification failed: $($checksumerror -join ' ')"
+    [void](Show-UiMsgBox -Text "Checksum verification FAILED - nothing was imported!`n`nThe data files of these exports are missing or were changed after the export:`n$checksumerrorlist`n`nDetails can be found in $($Global:EXPIMPLOGFILE)" -OkLabel 'EXIT')
+    exit 27
+}
+
+# confirm the import (show source and target system)
+$importwarning = ''
+$confirmsid    = $false
+if (-not $expsid) {
+    $importwarning += "`nWARNING: export of an older version without metadata and checksums,`n         the source system and the data files cannot be verified!`n"
+    $confirmsid = $true
+} elseif ($expsid -ne $env:SAPSYSTEMNAME) {
+    $importwarning += "`nWARNING: SAPSYSTEM MISMATCH - the export was created on $expsid!`n"
+}
+if ($exphost -and $exphost -ne $curhost) {
+    $importwarning += "`nINFO: the export was created on another host ($exphost)`n"
+}
+$confirmtext = @"
+Export: $impsrc
+
+You are going to IMPORT into
+
+  SAPSYSTEM: $($env:SAPSYSTEMNAME) | HOST: $curhost
+
+The export was created on
+
+  SAPSYSTEM: $(Get-OrUnknown $expsid) | HOST: $(Get-OrUnknown $exphost) | CLIENT: $(Get-OrUnknown $expclient)
+  USER: $(Get-OrUnknown $expuser) | DATE: $(Get-OrUnknown $expdate)
+$importwarning
+Selected exports:
+$($importlist -join ' ')
+
+The existing content of these tables will be DELETED and replaced!
+
+Continue with the import?
+"@
+$continue = Show-UiYesNo -Text $confirmtext -YesLabel 'Import' -NoLabel 'Exit' -DefaultNo
+if ($continue -ne 0) {
+    Write-ExpImpLog 'INFO: import not confirmed'
+    exit 28
+}
+if ($confirmsid) {
+    $typed = Show-UiInputBox -Text "The export was created by an older version - the source system and the data files could not be verified!`n`nType the SID of this system ($($env:SAPSYSTEMNAME)) to confirm the import:"
+    if ($typed.Cancelled -or $typed.Value -cne $env:SAPSYSTEMNAME) {
+        Write-ExpImpLog 'INFO: import not confirmed (SID not confirmed)'
+        exit 28
+    }
+}
+Write-ExpImpLog "INFO: import confirmed (source: SID=$(Get-OrUnknown $expsid) HOST=$(Get-OrUnknown $exphost) DATE=$(Get-OrUnknown $expdate))"
+
 # export info file
-$importedtables = Join-Path $Global:EXPIMPLOC 'imported_tables.conf'
+$importedtables = Join-Path $impsrc 'imported_tables.conf'
 
 # info file
 Write-AsciiFile -Path $importedtables -Lines @(
     '# Template name | Return Code of Import'
     '# ====================================='
     '# Imported from:'
-    ('# ' + $Global:EXPIMPLOC)
+    ('# ' + $impsrc)
     '# ====================================='
 )
 
 # import tables
 try {
-    Start-UiProgressView -Text 'Import selected tables'
-    foreach ($SELTABLES in $seltables) {
-        $datfile = Join-Path $Global:EXPIMPLOC "$SELTABLES.dat"
-        $logfile = Join-Path $Global:EXPIMPLOC "$SELTABLES.imp.log"
+    # progress: number of the export / number of exports
+    $imptotal = $importlist.Count
+    $impnr    = 0
+    Start-UiProgressView -Text "Import selected tables ($imptotal exports)"
+    foreach ($SELTABLES in $importlist) {
+        $impnr++
+        $datfile = Join-Path $impsrc "$SELTABLES.dat"
+        $logfile = Join-Path $impsrc "$SELTABLES.imp.log"
 
-        Write-Host "=== Import START $SELTABLES ===" -ForegroundColor Cyan
+        Write-Host "=== Import $impnr/$imptotal`: $SELTABLES ===" -ForegroundColor Cyan
         # R3trans writes warnings to stderr - '2>&1' would raise a terminating
         # error under $ErrorActionPreference = 'Stop' (Windows PowerShell 5.1)
         $prevEap = $ErrorActionPreference
@@ -132,7 +272,8 @@ try {
             $ErrorActionPreference = $prevEap
         }
         Add-Content -LiteralPath $importedtables -Value "$SELTABLES|RC=$rc" -Encoding ascii
-        Write-Host "=== Import END $SELTABLES ===" -ForegroundColor Cyan
+        Write-Host "=== Import END $SELTABLES (RC=$rc) ===" -ForegroundColor Cyan
+        Write-Host "=== $(Get-ExpImpProgressBar -Current $impnr -Total $imptotal) done ===" -ForegroundColor Green
         Write-Host ''
         Start-Sleep -Seconds 1
     }
@@ -155,6 +296,13 @@ if ($rc -ne 0) {
     exit 26
 }
 Clear-Host
+
+# highest return code of R3trans (RC >= 8 is an error)
+$maxrc = Get-ExpImpMaxRc -Path $importedtables
+if ($maxrc -ge 8) {
+    Write-ExpImpLog "ERROR: error while import (highest RC=$maxrc, see imported tables)"
+    exit 25
+}
 
 Write-ExpImpLog '=== import finished ==='
 exit 0
