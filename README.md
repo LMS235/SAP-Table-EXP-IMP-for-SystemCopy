@@ -97,9 +97,9 @@ Invalid values stop the script with exit code 91.
 * Every export writes the SHA-256 checksum of each data file and the source system
   (SID, host, client, user, date) into `exported_tables.conf`.
 * Before the import the checksums are verified (exit code 27 if a data file is missing or was changed)
-  and the import has to be confirmed (default is "Exit"). If the SID of the export differs from the
-  current SID, or the export was created by an older version without checksums, the SID of the
-  current system has to be typed in to confirm the import.
+  and the import has to be confirmed (default is "Exit"). The confirmation shows the source system
+  of the export and a warning if its SID differs from the current SID. If the export was created by
+  an older version without checksums, the SID of the current system has to be typed in to confirm.
 * Before a new export, the files of the previous run are copied to `EXPIMPLOC/backup/<timestamp>`
   and only then deleted. Backups are never deleted by the script.
 * If there are several exports (the current export and backups of previous runs), the export to

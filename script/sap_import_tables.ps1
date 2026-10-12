@@ -193,7 +193,6 @@ if (-not $expsid) {
     $confirmsid = $true
 } elseif ($expsid -ne $env:SAPSYSTEMNAME) {
     $importwarning += "`nWARNING: SAPSYSTEM MISMATCH - the export was created on $expsid!`n"
-    $confirmsid = $true
 }
 if ($exphost -and $exphost -ne $curhost) {
     $importwarning += "`nINFO: the export was created on another host ($exphost)`n"
@@ -223,7 +222,7 @@ if ($continue -ne 0) {
     exit 28
 }
 if ($confirmsid) {
-    $typed = Show-UiInputBox -Text "The source system of the export could not be verified!`n`nType the SID of this system ($($env:SAPSYSTEMNAME)) to confirm the import:"
+    $typed = Show-UiInputBox -Text "The export was created by an older version - the source system and the data files could not be verified!`n`nType the SID of this system ($($env:SAPSYSTEMNAME)) to confirm the import:"
     if ($typed.Cancelled -or $typed.Value -cne $env:SAPSYSTEMNAME) {
         Write-ExpImpLog 'INFO: import not confirmed (SID not confirmed)'
         exit 28

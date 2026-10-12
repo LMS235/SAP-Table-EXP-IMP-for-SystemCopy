@@ -200,7 +200,6 @@ if [ -z "$EXPSID" ]
 elif [ "$EXPSID" != "$SAPSYSTEMNAME" ]
  then
 	IMPORTWARNING="$IMPORTWARNING\nWARNING: SAPSYSTEM MISMATCH - the export was created on $EXPSID!\n"
-	CONFIRMSID=yes
 fi
 if [ -n "$EXPHOST" ] && [ "$EXPHOST" != "$CURHOST" ]
  then
@@ -216,7 +215,7 @@ if [ $? -ne 0 ]
 fi
 if [ "$CONFIRMSID" = yes ]
  then
-	TYPEDSID=$(dialog --title "$global_title" --backtitle "$global_backtitle" --inputbox "The source system of the export could not be verified!\n\nType the SID of this system ($SAPSYSTEMNAME) to confirm the import:" $global_height $global_width 2>&1 >/dev/tty)
+	TYPEDSID=$(dialog --title "$global_title" --backtitle "$global_backtitle" --inputbox "The export was created by an older version - the source system and the data files could not be verified!\n\nType the SID of this system ($SAPSYSTEMNAME) to confirm the import:" $global_height $global_width 2>&1 >/dev/tty)
 	if [ $? -ne 0 ] || [ "$TYPEDSID" != "$SAPSYSTEMNAME" ]
 	 then
 		echo "INFO: import not confirmed (SID not confirmed)" >> $EXPIMPLOGFILE
