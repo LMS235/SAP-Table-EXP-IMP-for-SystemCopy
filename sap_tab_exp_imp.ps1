@@ -24,6 +24,9 @@
 # Version 1.9.1 - Correct VSCAN Template
 # Version 1.10  - Security Hardening (permissions, checksums, target check, backup, user and config check)
 
+# errors in the config block are checked after it (see below)
+$Error.Clear()
+
 ##### CONFIG EXPORT / IMPORT LOCATION #####
 $EXPIMPLOC = ''
 ###########################################
@@ -102,6 +105,30 @@ $EXPIMPGROUP = 'SAP_LocalAdmin'
 # 28 - import not confirmed
 # 29 - no export selected for import
 ###########################################
+
+# check the text of the numeric values in the config block - PowerShell accepts
+# e.g. 0x (= 0), 0x10 (= 16) or 2KB (= 2048) as numbers, only digits are allowed
+foreach ($cfgline in @(Get-Content -LiteralPath $PSCommandPath)) {
+    if ($cfgline -match '^\s*\$(PARALLEL|BACKUPKEEP)\s*=\s*(.*?)\s*(#.*)?$') {
+        $cfgname  = $Matches[1]
+        $cfgvalue = $Matches[2] -replace "^'(.*)'$", '$1' -replace '^"(.*)"$', '$1'
+        if ($cfgvalue -notmatch '^[0-9]+\z') {
+            Write-Host "$cfgname '$cfgvalue' is invalid (allowed: 0 or a positive number)"
+            Write-Host '... EXIT NOW'
+            exit 91
+        }
+    }
+}
+
+# check the config block: a value without quotes that is no number
+# (e.g. $PARALLEL = 2x) is run as a command and leaves the variable empty
+if ($Error.Count -gt 0) {
+    Write-Host "error in the config block of $($MyInvocation.MyCommand.Name):"
+    Write-Host "$($Error[0])"
+    Write-Host 'please put text values in quotes, e.g. $EXPCLIENT = ''100'''
+    Write-Host '... EXIT NOW'
+    exit 91
+}
 
 $ErrorActionPreference = 'Stop'
 
