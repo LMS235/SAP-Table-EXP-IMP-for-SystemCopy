@@ -20,8 +20,9 @@ and a tool for SHA-256 checksums (`sha256sum`, `shasum`, `csum` or `openssl`).
 ## Windows
 
 > [!NOTE]
-> Version 1.10 of the Windows version (PowerShell) was only tested with PowerShell 7 on Linux,
-> not yet on a Windows system (Windows PowerShell 5.1, permissions of `EXPIMPLOC`).
+> Version 1.10 of the Windows version was tested on Windows with Windows PowerShell 5.1.
+> Not tested yet: a UNC path as `EXPIMPLOC`, a missing access group (`EXPIMPGROUP`) and an
+> `EXPIMPLOC` that belongs to another user.
 
 > [!IMPORTANT]
 >`copy to your Windows Server and run sap_tab_exp_imp.ps1 as <sid>adm`
