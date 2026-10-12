@@ -137,43 +137,40 @@ expimp_progress_bar() {
 # progress box that survives a resize of the terminal (a running "dialog --progressbox"
 # is not redrawn by some dialog versions after the terminal was made smaller / bigger)
 # - the input is shown with "dialog --infobox" (the last lines that fit into the box)
-# - redrawn for every new line and every second if the size of the terminal changed
+# - redrawn only at planned points: when a template starts ("=== Export 5/10: ...")
+#   and when it is finished ("=== [#####.....] 5/10 (50%) done ===") - the output of
+#   R3trans in between is collected and shown with the next update (no flickering)
 # - the input is always read completely (R3trans is never ended by a broken pipe)
 expimp_progressbox() {
- local text=$1 line partial eof redraw lastsize drawsize max start i out
+ local text=$1 line eof drawsize lastsize max start i out
  local -a lines=()
- partial=""
  eof=no
  lastsize=""
  while [ "$eof" = no ]
  do
-  redraw=no
-  line=""
-  if IFS= read -r -t 1 line
+  if IFS= read -r line
    then
-	lines+=("$partial$line")
-	partial=""
-	redraw=yes
-  elif [ $? -gt 128 ]
-   then
-	# timeout: keep a partly read line for the next read
-	partial+=$line
+	lines+=("$line")
   else
-	# end of input (a last line without newline is shown too)
-	[ -n "$partial$line" ] && lines+=("$partial$line")
+	# end of input (a last line without newline is kept too)
+	[ -n "$line" ] && lines+=("$line")
 	eof=yes
-	redraw=yes
   fi
   # keep only the last 200 lines
   [ "${#lines[@]}" -gt 200 ] && lines=("${lines[@]:$((${#lines[@]} - 200))}")
+  # redraw only when a template starts or is finished
+  case "$line" in
+   "=== Export "[0-9]*|"=== Import "[0-9]*|"=== ["*) ;;
+   *) continue ;;
+  esac
   expimp_dialog_size
   drawsize="$DLGH $DLGW"
+  # the size of the terminal changed: clear the old screen once
   if [ "$drawsize" != "$lastsize" ]
    then
-	redraw=yes
 	clear > /dev/tty
+	lastsize=$drawsize
   fi
-  [ "$redraw" = yes ] || continue
   max=$((DLGH - 4))
   [ "$max" -lt 1 ] && max=1
   start=$((${#lines[@]} - max))
@@ -183,12 +180,7 @@ expimp_progressbox() {
   do
    out+=$'\n'"${lines[$i]:0:$((DLGW - 4))}"
   done
-  # if dialog fails (terminal too small), it is drawn again with the next size check
-  if dialog --title "$global_title" --backtitle "$global_backtitle" --no-collapse --no-nl-expand --infobox "$out" "$DLGH" "$DLGW" > /dev/tty 2>/dev/null
-   then
-	lastsize=$drawsize
-  else
-	lastsize=""
-  fi
+  # if dialog fails (terminal too small), the screen is cleared and drawn with the next update
+  dialog --title "$global_title" --backtitle "$global_backtitle" --no-collapse --no-nl-expand --infobox "$out" "$DLGH" "$DLGW" > /dev/tty 2>/dev/null || lastsize=""
  done
 }
