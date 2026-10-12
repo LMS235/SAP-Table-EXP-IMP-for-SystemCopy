@@ -58,6 +58,17 @@ if ($oldrunfiles.Count -gt 0) {
             try {
                 $null = New-Item -ItemType Directory -Path $backupdir -Force
                 foreach ($f in $oldrunfiles) { Copy-Item -LiteralPath $f.FullName -Destination $backupdir -Force }
+                # the info files in the backup show the backup directory as location
+                foreach ($infoname in 'exported_tables.conf', 'imported_tables.conf') {
+                    $infofile = Join-Path $backupdir $infoname
+                    if (-not (Test-Path -LiteralPath $infofile)) { continue }
+                    $prev = ''
+                    $info = foreach ($line in @(Get-Content -LiteralPath $infofile)) {
+                        if ($prev -eq '# Exported to:' -or $prev -eq '# Imported from:') { '# ' + $backupdir } else { $line }
+                        $prev = $line
+                    }
+                    Write-AsciiFile -Path $infofile -Lines @($info)
+                }
             } catch {
                 Write-ExpImpLog "ERROR: backup of the previous run to $backupdir failed, nothing deleted ($($_.Exception.Message))"
                 exit 15

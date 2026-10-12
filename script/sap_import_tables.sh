@@ -90,7 +90,7 @@ exportedtablesok=$IMPSRC/exported_tables_ok.conf
 # check existing data
 if [ -e "$exportedtablesok" ]
  then
-	expimp_dialog --title "$global_title" --backtitle "$global_backtitle"  --yes-label "Continue" --no-label "Exit" --yesno  "There are import files in $IMPSRC\nIf you continue these files will be deleted!" @H@ @W@
+	expimp_dialog --title "$global_title" --backtitle "$global_backtitle"  --yes-label "Continue" --no-label "Exit" --yesno  "There is the selection of a previous import in\n$IMPSRC\n\nIf you continue, this selection will be reset.\n(The export data is not changed.)" @H@ @W@
 	case $? in
 		0)
 			echo "INFO: delete old files" >> "$EXPIMPLOGFILE"

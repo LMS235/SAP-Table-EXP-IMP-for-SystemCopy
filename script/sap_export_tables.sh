@@ -60,6 +60,12 @@ if [ -n "$OLDRUNFILES" ]
 				echo "ERROR: backup of the previous run to $BACKUPDIR failed, nothing deleted" >> "$EXPIMPLOGFILE"
 				exit 15
 			fi
+			# the info files in the backup show the backup directory as location
+			for INFOFILE in "$BACKUPDIR/exported_tables.conf" "$BACKUPDIR/imported_tables.conf"
+			do
+			 [ -f "$INFOFILE" ] || continue
+			 awk -v d="$BACKUPDIR" '{ if (prev == "# Exported to:" || prev == "# Imported from:") print "# " d; else print; prev = $0 }' "$INFOFILE" > "$INFOFILE.tmp" && mv "$INFOFILE.tmp" "$INFOFILE"
+			done
 			echo "INFO: delete old files" >> "$EXPIMPLOGFILE"
 			echo "$OLDRUNFILES" | while IFS= read -r OLDFILE; do rm -f "$OLDFILE"; done
 			# keep only the newest BACKUPKEEP backups (0 = unlimited)
@@ -155,9 +161,9 @@ fi
 } > "$exportedtables"
 
 # check STMS_QA export
-if grep -q STMS_QA "$selectedtablesforexport"
+if grep -qx STMS_QA "$selectedtablesforexport"
 then
- expimp_dialog --title "$global_title" --backtitle "$global_backtitle" --exit-label "Continue" --msgbox "You are going to export STMS_QA \n\n Please refresh STMS_QA before continue" @H@ @W@
+ expimp_dialog --title "$global_title" --backtitle "$global_backtitle" --ok-label "Continue" --msgbox "You are going to export STMS_QA \n\n Please refresh STMS_QA before continue" @H@ @W@
  # check ESC hit
  if [ $? -eq 255 ];
  then

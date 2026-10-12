@@ -89,7 +89,7 @@ $exportedtablesok = Join-Path $impsrc 'exported_tables_ok.conf'
 
 # check existing data
 if (Test-Path -LiteralPath $exportedtablesok) {
-    $continue = Show-UiYesNo -Text "There are import files in $($impsrc)`nIf you continue these files will be deleted!" -YesLabel 'Continue' -NoLabel 'Exit'
+    $continue = Show-UiYesNo -Text "There is the selection of a previous import in`n$($impsrc)`n`nIf you continue, this selection will be reset.`n(The export data is not changed.)" -YesLabel 'Continue' -NoLabel 'Exit'
     switch ($continue) {
         0 {
             Write-ExpImpLog 'INFO: delete old files'

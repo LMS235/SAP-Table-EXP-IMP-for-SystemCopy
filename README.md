@@ -19,6 +19,10 @@ and a tool for SHA-256 checksums (`sha256sum`, `shasum`, `csum` or `openssl`).
 
 ## Windows
 
+> [!NOTE]
+> Version 1.10 of the Windows version (PowerShell) was only tested with PowerShell 7 on Linux,
+> not yet on a Windows system (Windows PowerShell 5.1, permissions of `EXPIMPLOC`).
+
 > [!IMPORTANT]
 >`copy to your Windows Server and run sap_tab_exp_imp.ps1 as <sid>adm`
 >
@@ -43,9 +47,11 @@ Keys in the console UI:
 | Key | Function |
 | --- | --- |
 | `UP` / `DOWN` / `PGUP` / `PGDN` / `HOME` / `END` | move |
+| `LEFT` / `RIGHT` | scroll horizontally (text box) |
 | `SPACE` | select / toggle |
 | `A` / `N` | select all / none (checklist) |
-| `ENTER` | OK |
+| `TAB` / `LEFT` / `RIGHT` | switch between the buttons (OK / Cancel, Yes / No) |
+| `ENTER` | confirm the selected button |
 | `ESC` | Cancel |
 
 ## Files
@@ -89,7 +95,9 @@ Invalid values stop the script with exit code 91.
     can be run by different `<sid>adm` users of the same group (`sapsys`), but nobody else has access.
     The script stops if `EXPIMPLOC` contains files of another group or files writable by others.
   * `OPEN`: files `666`, directories `777`, no permission checks - e.g. for NFS v3 shares with
-    different UIDs / GIDs on the hosts.
+    different UIDs / GIDs on the hosts. **Every user of the host can read the exports (PSEs,
+    secure storage ...) and can replace the data files together with `exported_tables.conf`** -
+    the checksums then only protect against accidental changes. Use `STRICT` wherever possible.
   * An existing directory `EXPIMPLOC` may belong to another user / group, it only has to be
     writable for `<sid>adm`.
 * Windows: `EXPIMPLOC` gets its own permissions without inheritance: full control for the current user,

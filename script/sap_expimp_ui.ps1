@@ -69,7 +69,8 @@ function Test-UiHost {
 # -------------------------------------------------------------------------
 function Write-ExpImpLog {
     param([string]$Message)
-    Add-Content -LiteralPath $Global:EXPIMPLOGFILE -Value $Message -Encoding ascii
+    # UTF-8: user names / paths with umlauts are kept (the R3trans control files stay ASCII)
+    Add-Content -LiteralPath $Global:EXPIMPLOGFILE -Value $Message -Encoding utf8
 }
 
 # -------------------------------------------------------------------------
@@ -199,10 +200,10 @@ function Get-UiBoxSize {
     $scrW = $s.W
     $scrH = $s.H
 
-    $w = [Math]::Min([int]$Global:global_width,  $scrW - 2)
-    $h = [Math]::Min([int]$Global:global_height, $scrH - 4)
-    if ($w -lt 40) { $w = [Math]::Max(40, $scrW - 2) }
-    if ($h -lt 12) { $h = [Math]::Max(12, $scrH - 4) }
+    # at most global_width x global_height, limited to the size of the window
+    # (a small minimum size keeps the box usable in a very small window)
+    $w = [Math]::Max(10, [Math]::Min([int]$Global:global_width,  $scrW - 2))
+    $h = [Math]::Max(6,  [Math]::Min([int]$Global:global_height, $scrH - 4))
 
     $pad = [Math]::Max(0, [int](($scrW - $w) / 2))
 
@@ -352,6 +353,16 @@ function New-UiButtonRow {
     return (New-UiInnerRow $Box ((' ' * $left) + $text) $Global:UiTitleFg $Global:UiBoxBg)
 }
 
+# OK / Cancel buttons, the selected one is shown in brackets (0 = OK, 1 = Cancel)
+function New-UiOkCancelRow {
+    param($Box, [int]$Button)
+    $o = if ($Button -eq 0) { '[ OK ]' } else { '  OK  ' }
+    $c = if ($Button -eq 1) { '[ Cancel ]' } else { '  Cancel  ' }
+    $txt  = "$o    $c"
+    $left = [Math]::Max(0, [int](($Box.InW - $txt.Length) / 2))
+    return (New-UiInnerRow $Box ((' ' * $left) + $txt) $Global:UiTitleFg $Global:UiBoxBg)
+}
+
 # -------------------------------------------------------------------------
 # msgbox   -> returns 0 (ok) or 255 (ESC)
 # -------------------------------------------------------------------------
@@ -427,6 +438,7 @@ function Show-UiInputBox {
     Clear-Host
     $Global:UiFrameHeight = 0
     $value = ''
+    $btn   = 0
     while ($true) {
         $box  = Get-UiBoxSize
         $rows = New-Object System.Collections.Generic.List[object]
@@ -437,15 +449,18 @@ function Show-UiInputBox {
         $rows.Add((New-UiInnerRow $box ''))
         $rows.Add((New-UiInnerRow $box ('  > ' + $value + '_') $Global:UiSelFg $Global:UiSelBg))
         while ($rows.Count -lt ($box.InH - 3)) { $rows.Add((New-UiInnerRow $box '')) }
-        $rows.Add((New-UiButtonRow $box @('< OK >', '<Cancel>')))
+        $rows.Add((New-UiOkCancelRow $box $btn))
         $rows.Add((New-UiInnerRow $box ''))
-        $rows.Add((New-UiInnerRow $box '  [ENTER] OK   [BACKSPACE] delete   [ESC] cancel' $Global:UiFrameFg $Global:UiBoxBg))
+        $rows.Add((New-UiInnerRow $box '  [BACKSPACE] delete  [TAB] OK/Cancel  [ENTER] confirm  [ESC] cancel' $Global:UiFrameFg $Global:UiBoxBg))
         Write-UiFrame (Build-UiFrame $box $Global:global_title $rows)
 
         $key = Read-UiKey
         switch ($key.VirtualKeyCode) {
             $Global:UiKeyEsc   { Clear-Host; return [PSCustomObject]@{ Cancelled = $true;  Value = '' } }
-            $Global:UiKeyEnter { Clear-Host; return [PSCustomObject]@{ Cancelled = $false; Value = $value } }
+            $Global:UiKeyEnter { Clear-Host; return [PSCustomObject]@{ Cancelled = ($btn -eq 1); Value = $value } }
+            9  { $btn = 1 - $btn }    # tab
+            37 { $btn = 0 }           # left
+            39 { $btn = 1 }           # right
             8 { if ($value.Length -gt 0) { $value = $value.Substring(0, $value.Length - 1) } }    # backspace
             default {
                 $c = [int][char]$key.Character
@@ -468,6 +483,7 @@ function Show-UiRadioList {
     $set = 0
     for ($i = 0; $i -lt $list.Count; $i++) { if ($list[$i].On) { $set = $i; $cur = $i; break } }
     $top = 0
+    $btn = 0
 
     while ($true) {
         $box  = Get-UiBoxSize
@@ -494,9 +510,9 @@ function Show-UiRadioList {
             }
         }
         while ($rows.Count -lt ($box.InH - 3)) { $rows.Add((New-UiInnerRow $box '')) }
-        $rows.Add((New-UiButtonRow $box @('< OK >', '<Cancel>')))
+        $rows.Add((New-UiOkCancelRow $box $btn))
         $rows.Add((New-UiInnerRow $box ''))
-        $rows.Add((New-UiInnerRow $box '  [UP/DOWN] move   [SPACE] select   [ENTER] OK   [ESC] cancel' $Global:UiFrameFg $Global:UiBoxBg))
+        $rows.Add((New-UiInnerRow $box '  [UP/DOWN] move  [SPACE] select  [TAB] OK/Cancel  [ENTER] confirm' $Global:UiFrameFg $Global:UiBoxBg))
         Write-UiFrame (Build-UiFrame $box $Global:global_title $rows)
 
         $key = Read-UiKey
@@ -507,7 +523,15 @@ function Show-UiRadioList {
             $Global:UiKeyHome  { $cur = 0 }
             $Global:UiKeyEnd   { $cur = $list.Count - 1 }
             $Global:UiKeySpace { $set = $cur }
-            $Global:UiKeyEnter { $set = $cur; Clear-Host; return [PSCustomObject]@{ Cancelled = $false; Tag = $list[$set].Tag } }
+            $Global:UiKeyEnter {
+                Clear-Host
+                if ($btn -eq 1) { return [PSCustomObject]@{ Cancelled = $true; Tag = $null } }
+                $set = $cur
+                return [PSCustomObject]@{ Cancelled = $false; Tag = $list[$set].Tag }
+            }
+            9  { $btn = 1 - $btn }    # tab
+            37 { $btn = 0 }           # left
+            39 { $btn = 1 }           # right
         }
     }
 }
@@ -528,6 +552,7 @@ function Show-UiCheckList {
     for ($i = 0; $i -lt $list.Count; $i++) { $state[$i] = [bool]$list[$i].On }
     $cur = 0
     $top = 0
+    $btn = 0
 
     while ($true) {
         $box   = Get-UiBoxSize
@@ -556,9 +581,9 @@ function Show-UiCheckList {
             }
         }
         while ($rows.Count -lt ($box.InH - 3)) { $rows.Add((New-UiInnerRow $box '')) }
-        $rows.Add((New-UiButtonRow $box @('< OK >', '<Cancel>')))
+        $rows.Add((New-UiOkCancelRow $box $btn))
         $rows.Add((New-UiInnerRow $box ''))
-        $rows.Add((New-UiInnerRow $box '  [SPACE] toggle  [A] all  [N] none  [ENTER] OK  [ESC] cancel' $Global:UiFrameFg $Global:UiBoxBg))
+        $rows.Add((New-UiInnerRow $box '  [SPACE] toggle  [A] all  [N] none  [TAB] OK/Cancel  [ENTER] confirm' $Global:UiFrameFg $Global:UiBoxBg))
         Write-UiFrame (Build-UiFrame $box $Global:global_title $rows)
 
         $key = Read-UiKey
@@ -571,7 +596,11 @@ function Show-UiCheckList {
             $Global:UiKeyHome  { $cur = 0 }
             $Global:UiKeyEnd   { $cur = $list.Count - 1 }
             $Global:UiKeySpace { $state[$cur] = -not $state[$cur] }
+            9  { $btn = 1 - $btn }    # tab
+            37 { $btn = 0 }           # left
+            39 { $btn = 1 }           # right
             $Global:UiKeyEnter {
+                if ($btn -eq 1) { Clear-Host; return [PSCustomObject]@{ Cancelled = $true; Tags = @() } }
                 $tags = @()
                 for ($i = 0; $i -lt $list.Count; $i++) { if ($state[$i]) { $tags += $list[$i].Tag } }
                 Clear-Host
@@ -595,7 +624,10 @@ function Show-UiTextBox {
     $Global:UiFrameHeight = 0
     $content = @()
     if (Test-Path -LiteralPath $Path) { $content = @(Get-Content -LiteralPath $Path) }
-    $top = 0
+    $top  = 0
+    $left = 0
+    $maxlen = 0
+    foreach ($l in $content) { if ("$l".Length -gt $maxlen) { $maxlen = "$l".Length } }
 
     while ($true) {
         $box   = Get-UiBoxSize
@@ -608,12 +640,14 @@ function Show-UiTextBox {
         $rows = New-Object System.Collections.Generic.List[object]
         $rows.Add((New-UiInnerRow $box ''))
         for ($i = $top; $i -lt [Math]::Min($top + $avail, $content.Count); $i++) {
-            $rows.Add((New-UiInnerRow $box (' ' + $content[$i])))
+            $line = "$($content[$i])"
+            if ($left -lt $line.Length) { $line = $line.Substring($left) } else { $line = '' }
+            $rows.Add((New-UiInnerRow $box (' ' + $line)))
         }
         while ($rows.Count -lt ($box.InH - 3)) { $rows.Add((New-UiInnerRow $box '')) }
         $rows.Add((New-UiButtonRow $box @("< $ExitLabel >")))
         $rows.Add((New-UiInnerRow $box ''))
-        $rows.Add((New-UiInnerRow $box "  [UP/DOWN/PGUP/PGDN] scroll   [ENTER] $ExitLabel   [ESC] cancel" $Global:UiFrameFg $Global:UiBoxBg))
+        $rows.Add((New-UiInnerRow $box "  [UP/DOWN/PGUP/PGDN/LEFT/RIGHT] scroll   [ENTER] $ExitLabel" $Global:UiFrameFg $Global:UiBoxBg))
         Write-UiFrame (Build-UiFrame $box $Global:global_title $rows)
 
         $key = Read-UiKey
@@ -626,6 +660,8 @@ function Show-UiTextBox {
             $Global:UiKeyPgDn  { $top += $avail }
             $Global:UiKeyHome  { $top = 0 }
             $Global:UiKeyEnd   { $top = $max }
+            37 { $left = [Math]::Max(0, $left - 10) }                                # left
+            39 { if ($left + $box.InW - 2 -lt $maxlen) { $left += 10 } }             # right
         }
     }
 }
