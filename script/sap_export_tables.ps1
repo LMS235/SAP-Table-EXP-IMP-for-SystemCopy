@@ -93,7 +93,10 @@ if ($oldrunfiles.Count -gt 0) {
 # search templates
 $templates = @(Get-ChildItem -LiteralPath $templatedir -File | Sort-Object Name)
 $items = @($templates | ForEach-Object {
-    [PSCustomObject]@{ Tag = $_.Name; Item = $_.Name; On = $false }
+    # empty templates (no statements) are marked, they are skipped by the export
+    $name = $_.Name
+    if (-not (@(Get-Content -LiteralPath $_.FullName) -match '\S')) { $name = "$name (empty)" }
+    [PSCustomObject]@{ Tag = $_.Name; Item = $name; On = $false }
 })
 
 # select the templates
@@ -156,6 +159,13 @@ try {
             Add-Content -LiteralPath $exportedtables -Value "$SELTABLES|RC=TEMPLATE_MISSING|SHA256=" -Encoding ascii
             continue
         }
+        if (-not (@(Get-Content -LiteralPath $templatefile) -match '\S')) {
+            Write-Host "=== Export SKIPPED $SELTABLES (template empty) ===" -ForegroundColor Yellow
+            Write-Host "=== $(Get-ExpImpProgressBar -Current $expnr -Total $exptotal) done ===" -ForegroundColor Green
+            Write-Host ''
+            Add-Content -LiteralPath $exportedtables -Value "$SELTABLES|RC=TEMPLATE_EMPTY|SHA256=" -Encoding ascii
+            continue
+        }
         $tplfile = Join-Path $Global:EXPIMPLOC "$SELTABLES.tpl"
         $datfile = Join-Path $Global:EXPIMPLOC "$SELTABLES.dat"
         $logfile = Join-Path $Global:EXPIMPLOC "$SELTABLES.exp.log"
@@ -210,7 +220,7 @@ if ($rc -ne 0) {
 }
 Clear-Host
 
-# highest return code of R3trans (RC >= 8 or a missing template is an error)
+# highest return code of R3trans (RC >= 8 or a missing template is an error, an empty template is not)
 $maxrc = Get-ExpImpMaxRc -Path $exportedtables
 if ($maxrc -ge 8) {
     Write-ExpImpLog "ERROR: error while export (highest RC=$maxrc, see exported tables)"

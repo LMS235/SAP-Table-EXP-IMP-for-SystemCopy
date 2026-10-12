@@ -107,6 +107,8 @@ Invalid values stop the script with exit code 91.
 * If there are several exports (the current export and backups of previous runs), the export to
   import can be selected (default is the newest). The import reads the data from the selected
   directory and writes its own files (`*.imp.log`, `imported_tables.conf`, ...) into it.
+* Empty templates (e.g. `CUSTOM` without statements) are marked with `(empty)` in the selection.
+  If one is selected, it is skipped (`RC=TEMPLATE_EMPTY`, not an error) and not offered for import.
 * The data files are never deleted after an import (they can be imported several times or into
   several systems) - delete `EXPIMPLOC` manually when it is no longer needed.
 

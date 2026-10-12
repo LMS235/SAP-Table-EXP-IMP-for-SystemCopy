@@ -121,7 +121,7 @@ function Get-ExpImpSha256 {
 }
 
 # highest R3trans return code in an info file ("NAME|RC=n|..."),
-# a non-numeric return code (e.g. TEMPLATE_MISSING) counts as 12
+# a non-numeric return code (e.g. TEMPLATE_MISSING) counts as 12, TEMPLATE_EMPTY as 0
 function Get-ExpImpMaxRc {
     param([string]$Path)
     $max = 0
@@ -130,7 +130,7 @@ function Get-ExpImpMaxRc {
         $f = $line -split '\|'
         if ($f.Count -lt 2 -or -not $f[1].StartsWith('RC=')) { continue }
         $rc = $f[1].Substring(3)
-        if ($rc -match '^[0-9]+\z') { $rc = [int]$rc } else { $rc = 12 }
+        if ($rc -eq 'TEMPLATE_EMPTY') { $rc = 0 } elseif ($rc -match '^[0-9]+\z') { $rc = [int]$rc } else { $rc = 12 }
         if ($rc -gt $max) { $max = $rc }
     }
     return $max

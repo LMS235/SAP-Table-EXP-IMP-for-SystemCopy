@@ -101,7 +101,13 @@ for TEMPLATEFILE in "$global_pwd"/templates/*
 do
   [ -f "$TEMPLATEFILE" ] || continue
   TEMPLATE=${TEMPLATEFILE##*/}
-  TEMPLATELIST+=("$TEMPLATE" "$TEMPLATE" off)
+  # empty templates (no statements) are marked, they are skipped by the export
+  if grep -q '[^[:space:]]' "$TEMPLATEFILE"
+   then
+	TEMPLATELIST+=("$TEMPLATE" "$TEMPLATE" off)
+  else
+	TEMPLATELIST+=("$TEMPLATE" "$TEMPLATE (empty)" off)
+  fi
 done
 
 # select the templates
@@ -175,6 +181,14 @@ do
 	echo ""
 	continue
  fi
+ if ! grep -q '[^[:space:]]' "$global_pwd/templates/$SELTABLES"
+  then
+	echo "=== Export SKIPPED $SELTABLES (template empty) ==="
+	echo "$SELTABLES|RC=TEMPLATE_EMPTY|SHA256=" >> "$exportedtables"
+	echo "=== $(expimp_progress_bar "$EXPNR" "$EXPTOTAL") done ==="
+	echo ""
+	continue
+ fi
  {
   echo "export"
   echo "client = $EXPCLIENT"
@@ -211,8 +225,8 @@ if ! expimp_dialog --title "$global_title" --backtitle "$global_backtitle" --exi
 fi 
 clear
 
-# highest return code of R3trans (RC >= 8 or a missing template is an error)
-EXPMAXRC=$(awk -F'|' '!/^#/ && NF > 1 { rc = $2; sub(/^RC=/, "", rc); if (rc !~ /^[0-9]+$/) rc = 12; if (rc + 0 > max) max = rc + 0 } END { print max + 0 }' "$exportedtables")
+# highest return code of R3trans (RC >= 8 or a missing template is an error, an empty template is not)
+EXPMAXRC=$(awk -F'|' '!/^#/ && NF > 1 { rc = $2; sub(/^RC=/, "", rc); if (rc == "TEMPLATE_EMPTY") rc = 0; else if (rc !~ /^[0-9]+$/) rc = 12; if (rc + 0 > max) max = rc + 0 } END { print max + 0 }' "$exportedtables")
 if [ "$EXPMAXRC" -ge 8 ]
  then
 	echo "ERROR: error while export (highest RC=$EXPMAXRC, see exported tables)" >> "$EXPIMPLOGFILE"
