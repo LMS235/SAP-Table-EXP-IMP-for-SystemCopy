@@ -40,6 +40,15 @@ export EXPCLIENT=ALL
 export PARALLEL=0
 ###########################################
 
+##### CONFIG BACKUPKEEP ##################
+# number of backups of previous runs to keep
+# in EXPIMPLOC/backup (the oldest ones are
+# deleted after a new backup was created)
+# 0 = unlimited (no backup is deleted)
+# Default Value = 0
+export BACKUPKEEP=0
+###########################################
+
 ##### CONFIG PERMISSIONS ##################
 # OPEN   = files 666, directories 777, no
 #          permission checks (works always,
@@ -77,7 +86,8 @@ export EXPIMPPERM=OPEN
 # 94 - cannot create / secure export location (writable / group / permissions)
 # 93 - no SHA-256 tool found (sha256sum, shasum, csum or openssl)
 # 92 - user is not <sid>adm
-# 91 - invalid config value (EXPIMPLOC, EXPCLIENT, PARALLEL, EXPIMPPERM)
+# 90 - export / import script started directly (not by sap_tab_exp_imp.sh)
+# 91 - invalid config value (EXPIMPLOC, EXPCLIENT, PARALLEL, BACKUPKEEP, EXPIMPPERM)
 # export
 # 10 - exit because old run detected
 # 11 - fail to select templates for export
@@ -99,7 +109,9 @@ export EXPIMPPERM=OPEN
 ###########################################
 
 # set global variables
-export global_pwd=$(pwd)
+# directory of this script (templates, sub scripts) - independent of the current directory
+global_pwd=$(cd "$(dirname "$0")" && pwd)
+export global_pwd
 export global_height=45
 export global_width=80
 export global_list=35
@@ -109,7 +121,8 @@ export global_copy="(c) Florian Lamml 2026"
 
 
 # root check
-export CURUSER=$(id -un)
+CURUSER=$(id -un)
+export CURUSER
 if [ "$(id -u)" -eq 0 ];
 then
 	echo "This script must not be run as root user!" 
@@ -160,6 +173,20 @@ case "$PARALLEL" in
 esac
 export PARALLEL
 
+# BACKUPKEEP check empty variable
+if [ -z "${BACKUPKEEP}" ]; 
+ then
+	BACKUPKEEP=0
+fi
+case "$BACKUPKEEP" in
+ *[!0-9]*)
+   echo "BACKUPKEEP '$BACKUPKEEP' is invalid (allowed: 0 = unlimited or a positive number)"
+   echo "... EXIT NOW"
+   exit 91
+   ;;
+esac
+export BACKUPKEEP
+
 # check permission mode and set umask
 # the export files contain sensitive data (PSEs, secure storage, RFC destinations ...)
 # STRICT: all files and directories created by this tool are only accessible by the owner
@@ -181,7 +208,7 @@ export EXPIMPPERM
 if [ -z "$EXPIMPLOC" ]; 
  then 
  export EXPIMPLOCINFO="EXPIMPLOC is not set, use default";
- export EXPIMPLOC=$global_pwd/expimp/$SAPSYSTEMNAME
+ export EXPIMPLOC="$global_pwd/expimp/$SAPSYSTEMNAME"
 else 
  export EXPIMPLOCINFO="EXPIMPLOC is set to"; 
 fi
@@ -245,84 +272,106 @@ else
 fi
 
 # set logfile
-export EXPIMPLOGFILE=$EXPIMPLOC/EXP_IMP_LOG_$(date "+%d_%m_%Y").txt
-echo $(date "+%d.%m.%Y-%H:%M") >> $EXPIMPLOGFILE
+EXPIMPLOGFILE="$EXPIMPLOC/EXP_IMP_LOG_$(date "+%d_%m_%Y").txt"
+export EXPIMPLOGFILE
+date "+%d.%m.%Y-%H:%M" >> "$EXPIMPLOGFILE"
 
 # SHA-256 tool for the checksums of the export files
+# shellcheck source=script/sap_expimp_lib.sh
 . "$global_pwd/script/sap_expimp_lib.sh"
-export SHA256TOOL=$(expimp_find_sha256_tool)
+SHA256TOOL=$(expimp_find_sha256_tool)
+export SHA256TOOL
 if [ -z "$SHA256TOOL" ];
  then
    echo "cannot find a tool for SHA-256 checksums (sha256sum, shasum, csum or openssl)"
    echo "... EXIT NOW"
-   echo "ERROR: no SHA-256 tool found" >> $EXPIMPLOGFILE
+   echo "ERROR: no SHA-256 tool found" >> "$EXPIMPLOGFILE"
    exit 93
 fi
 
 # check AIX and set PATH and LIBPATH to use linux dialog (build from dialog-1.2-20150225 with gcc-4.8.3-1.aix7.1 on AIX 7.1) on AIX
-export OS=$(uname)
-if [ $OS == AIX ]
+OS=$(uname)
+export OS
+if [ "$OS" = AIX ]
 then
-export PATH=$PATH:$(pwd)/dialogaix/bin
-export LIBPATH=$LIBPATH:$(pwd)/dialogaix/lib
-chmod u+x $(pwd)/dialogaix/bin/dialog
+export PATH="$PATH:$global_pwd/dialogaix/bin"
+export LIBPATH="$LIBPATH:$global_pwd/dialogaix/lib"
+chmod u+x "$global_pwd/dialogaix/bin/dialog"
 fi
 
 # check if dialog is running
-dialog > /dev/null 2>&1
-export DIAGCHECK=$(echo $?)
-if [ $DIAGCHECK -ne 0 ];
+if ! dialog > /dev/null 2>&1;
  then
 	echo "cannot start linux 'dialog' command"
 	echo "... EXIT NOW"
 	exit 97
 fi
 
-# set executable to scripts
-chmod u+x $global_pwd/script/sap_export_tables.sh
-chmod u+x $global_pwd/script/sap_import_tables.sh
+# limit the dialog size to the size of the terminal (dialog fails if the terminal is smaller)
+TERMSIZE=$(stty size < /dev/tty 2>/dev/null)
+TERMLINES=${TERMSIZE% *}
+TERMCOLS=${TERMSIZE#* }
+case "$TERMLINES$TERMCOLS" in
+ ''|*[!0-9]*) TERMLINES=$(tput lines 2>/dev/null); TERMCOLS=$(tput cols 2>/dev/null) ;;
+esac
+case "$TERMLINES" in
+ ''|*[!0-9]*) ;;
+ *) [ "$TERMLINES" -lt $((global_height + 2)) ] && global_height=$((TERMLINES - 2)) ;;
+esac
+case "$TERMCOLS" in
+ ''|*[!0-9]*) ;;
+ *) [ "$TERMCOLS" -lt $((global_width + 2)) ] && global_width=$((TERMCOLS - 2)) ;;
+esac
+global_list=$((global_height - 10))
+[ "$global_list" -lt 1 ] && global_list=1
+export global_height global_width global_list
 
 # EXPORT or IMPORT dialog
-DIALOG=(dialog --title "$global_title" --backtitle "$global_backtitle"  --radiolist  "   _______   ___ \n  / __/ _ | / _ \ \n _\ \/ __ |/ ___/\n/___/_/ |_/_/    \n _________   ___  __   ____\n/_  __/ _ | / _ )/ /  / __/\n / / / __ |/ _  / /__/ _/  \n/_/ /_/ |_/____/____/___/  \n   _____  _____  ______  ______ \n  / __/ |/_/ _ \/  _/  |/  / _ \ \n / _/_>  </ ___// // /|_/ / ___/\n/___/_/|_/_/  /___/_/  /_/_/    \n\nEXPORT or IMPORT Tables?\n\nINFO: $EXPIMPLOCINFO\nINFO: $EXPIMPLOC \n\nCLIENT: $EXPCLIENT | PARALLEL: $PARALLEL\nOS: $OS | USER: $CURUSER | SAPSYSTEM: $SAPSYSTEMNAME\n\n                                $global_copy" $global_height $global_width 2)
+# ascii art only if the terminal is big enough for it
+STARTART=""
+[ "$global_height" -ge 34 ] && STARTART="   _______   ___ \n  / __/ _ | / _ \ \n _\ \/ __ |/ ___/\n/___/_/ |_/_/    \n _________   ___  __   ____\n/_  __/ _ | / _ )/ /  / __/\n / / / __ |/ _  / /__/ _/  \n/_/ /_/ |_/____/____/___/  \n   _____  _____  ______  ______ \n  / __/ |/_/ _ \/  _/  |/  / _ \ \n / _/_>  </ ___// // /|_/ / ___/\n/___/_/|_/_/  /___/_/  /_/_/    \n\n"
+DIALOG=(dialog --title "$global_title" --backtitle "$global_backtitle"  --radiolist  "${STARTART}EXPORT or IMPORT Tables?\n\nINFO: $EXPIMPLOCINFO\nINFO: $EXPIMPLOC \n\nCLIENT: $EXPCLIENT | PARALLEL: $PARALLEL | BACKUPKEEP: $BACKUPKEEP | PERM: $EXPIMPPERM\nOS: $OS | USER: $CURUSER | SAPSYSTEM: $SAPSYSTEMNAME\n\n                                $global_copy" "$global_height" "$global_width" 2)
 OPTIONS=("EXPORT" "Export SAP Tables" on "IMPORT" "Import SAP Tables" off)
-EXPORIMP=$("${DIALOG[@]}" "${OPTIONS[@]}" 2>&1 >/dev/tty)
-# check ESC hit
-if [ $? -eq 255 ];
+# check ESC / Cancel hit
+if ! EXPORIMP=$("${DIALOG[@]}" "${OPTIONS[@]}" 2>&1 >/dev/tty);
  then
-	echo "Hit ESC"
+	clear
+	echo "Hit ESC / Cancel"
 	echo "... EXIT NOW"
 	exit 96
 fi
 
 # EXPORT or IMPORT
-for choice in $EXPORIMP
-do
-    case $choice in
-        EXPORT)
+EXPIMPRUNRC=96
+EXPIMPRUN="Procedure finished with RC="
+case "$(echo "$EXPORIMP" | tr -d '"')" in
+    EXPORT)
 			(
-			echo "Export SAP Tables" >> $EXPIMPLOGFILE
+			echo "Export SAP Tables" >> "$EXPIMPLOGFILE"
 			# run export script
-			$global_pwd/script/sap_export_tables.sh
+			bash "$global_pwd/script/sap_export_tables.sh"
 			)
-			export EXPIMPRUNRC=$(echo $?)
-			export EXPIMPRUN="Export procedure finished with RC="
+			EXPIMPRUNRC=$?
+			EXPIMPRUN="Export procedure finished with RC="
             ;;
-        IMPORT)
+    IMPORT)
 			(
-			echo "Import SAP Tables" >> $EXPIMPLOGFILE
+			echo "Import SAP Tables" >> "$EXPIMPLOGFILE"
 			# run import script
-			$global_pwd/script/sap_import_tables.sh
+			bash "$global_pwd/script/sap_import_tables.sh"
 			)
-			export EXPIMPRUNRC=$(echo $?)
-			export EXPIMPRUN="Import procedure finished with RC="
+			EXPIMPRUNRC=$?
+			EXPIMPRUN="Import procedure finished with RC="
             ;;
-    esac
-done
+esac
 
 # summary
-
-dialog --title "$global_title" --backtitle "$global_backtitle"  --ok-label "EXIT" --msgbox "$EXPIMPRUN$EXPIMPRUNRC\n\nLogfiles can be found in $EXPIMPLOC" $global_height $global_width
+EXPIMPRUNINFO=""
+case "$EXPIMPRUNRC" in
+ 13|25) EXPIMPRUNINFO="\n\nERROR: at least one table failed (R3trans RC >= 8 or template missing)!\nPlease check the R3trans log files (*.exp.log / *.imp.log)." ;;
+esac
+dialog --title "$global_title" --backtitle "$global_backtitle"  --ok-label "EXIT" --msgbox "$EXPIMPRUN$EXPIMPRUNRC$EXPIMPRUNINFO\n\nLogfiles can be found in $EXPIMPLOC" "$global_height" "$global_width"
 
 # exit
 clear
-exit $EXPIMPRUNRC
+exit "$EXPIMPRUNRC"

@@ -71,6 +71,7 @@ Both main scripts have the same config options at the top:
 | `EXPIMPLOC` | export / import location (absolute path), default `<script dir>/expimp/<SID>` |
 | `EXPCLIENT` | `ALL`, `DEFAULT` or a 3-digit client number, default `ALL` |
 | `PARALLEL` | R3trans parallel parameter (SAP note 1127194), `0` or a positive number, default `0` |
+| `BACKUPKEEP` | number of backups of previous runs to keep in `EXPIMPLOC/backup`, `0` = unlimited, default `0` |
 | `EXPIMPPERM` | Unix only: `OPEN` (files `666`, directories `777`, no checks) or `STRICT` (files `660`, directories `770`, checks), default `OPEN` |
 | `EXPIMPGROUP` | Windows only: group with access to `EXPIMPLOC` (e.g. other `<sid>adm` users), default `SAP_LocalAdmin` |
 
@@ -101,7 +102,8 @@ Invalid values stop the script with exit code 91.
   of the export and a warning if its SID differs from the current SID. If the export was created by
   an older version without checksums, the SID of the current system has to be typed in to confirm.
 * Before a new export, the files of the previous run are copied to `EXPIMPLOC/backup/<timestamp>`
-  and only then deleted. Backups are never deleted by the script.
+  and only then deleted. With `BACKUPKEEP` > 0 only the newest backups are kept, older backups are
+  deleted after a new backup was created (default `0` = backups are never deleted).
 * If there are several exports (the current export and backups of previous runs), the export to
   import can be selected (default is the newest). The import reads the data from the selected
   directory and writes its own files (`*.imp.log`, `imported_tables.conf`, ...) into it.
@@ -120,11 +122,12 @@ Invalid values stop the script with exit code 91.
 | 94 | cannot create the export location / not writable (Unix `STRICT`: files of another group / writable by others) |
 | 93 | no SHA-256 tool found (Unix only) |
 | 92 | user is not `<sid>adm` |
-| 91 | invalid config value (`EXPIMPLOC`, `EXPCLIENT`, `PARALLEL`, `EXPIMPPERM`) |
+| 90 | export / import script started directly (must be started by the main script) |
+| 91 | invalid config value (`EXPIMPLOC`, `EXPCLIENT`, `PARALLEL`, `BACKUPKEEP`, `EXPIMPPERM`) |
 | 10 | export: exit because old run detected |
 | 11 | export: fail to select templates for export |
 | 12 | export: no template selected for export |
-| 13 | export: error while export |
+| 13 | export: error while export (R3trans RC >= 8 or template missing) |
 | 14 | export: export info error |
 | 15 | export: backup of the previous run failed |
 | 20 | import: no exports found for import |
@@ -132,7 +135,7 @@ Invalid values stop the script with exit code 91.
 | 22 | import: no OK exports found for import |
 | 23 | import: import select error |
 | 24 | import: no exports selected for import |
-| 25 | import: error while import |
+| 25 | import: error while import (R3trans RC >= 8) |
 | 26 | import: import info error |
 | 27 | import: checksum verification failed |
 | 28 | import: import not confirmed |

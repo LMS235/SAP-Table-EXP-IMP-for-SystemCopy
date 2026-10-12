@@ -1,4 +1,6 @@
 #!/bin/bash
+# global_* variables are exported by sap_tab_exp_imp.sh
+# shellcheck disable=SC2154
 # SAP(R) Table EXP/IMP for SystemCopy (c) Florian Lamml 2026
 # www.florian-lamml.de
 # Version 1.0 - Initial Release
@@ -25,7 +27,16 @@
 # Version 1.9.1 - Correct VSCAN Template
 # Version 1.10  - Security Hardening (permissions, checksums, target check, backup, user and config check)
 
+# the import script must be started by sap_tab_exp_imp.sh (config, checks, logfile)
+if [ -z "$EXPIMPLOC" ] || [ -z "$EXPIMPLOGFILE" ] || [ -z "$SHA256TOOL" ]
+ then
+	echo "This script must be started by sap_tab_exp_imp.sh!"
+	echo "... EXIT NOW"
+	exit 90
+fi
+
 # helper functions (checksums, metadata)
+# shellcheck source=script/sap_expimp_lib.sh
 . "$(dirname "$0")/sap_expimp_lib.sh"
 
 # exports available for import: the current export and the backups of previous runs
@@ -38,15 +49,15 @@ do
  [ -s "$BACKUPDIR/exported_tables.conf" ] && BACKUPDIRS=("$BACKUPDIR" "${BACKUPDIRS[@]}")
 done
 IMPSRCDIRS+=("${BACKUPDIRS[@]}")
-if [ ${#IMPSRCDIRS[@]} -eq 0 ]
+if [ "${#IMPSRCDIRS[@]}" -eq 0 ]
  then 
-	echo "ERROR: no exports found for import" >> $EXPIMPLOGFILE
+	echo "ERROR: no exports found for import" >> "$EXPIMPLOGFILE"
 	exit 20
 fi
 
 # select the export to import if there is more than one (default is the newest)
 IMPSRC=${IMPSRCDIRS[0]}
-if [ ${#IMPSRCDIRS[@]} -gt 1 ]
+if [ "${#IMPSRCDIRS[@]}" -gt 1 ]
  then
 	IMPSRCLIST=()
 	IMPSRCNR=0
@@ -57,13 +68,12 @@ if [ ${#IMPSRCDIRS[@]} -gt 1 ]
 	 IMPSRCDATE=$(expimp_meta "$IMPSRCDIR/exported_tables.conf" DATE)
 	 IMPSRCSID=$(expimp_meta "$IMPSRCDIR/exported_tables.conf" SID)
 	 IMPSRCCOUNT=$(grep -c '|RC=' "$IMPSRCDIR/exported_tables.conf")
-	 [ $IMPSRCNR -eq 1 ] && IMPSRCSTATE=on || IMPSRCSTATE=off
+	 [ "$IMPSRCNR" -eq 1 ] && IMPSRCSTATE=on || IMPSRCSTATE=off
 	 IMPSRCLIST+=("$IMPSRCNR" "$IMPSRCNAME | ${IMPSRCDATE:-unknown date} | SID ${IMPSRCSID:-unknown} | $IMPSRCCOUNT exports" "$IMPSRCSTATE")
 	done
-	IMPSRCNR=$(dialog --title "$global_title" --backtitle "$global_backtitle" --radiolist "Select the export to import (default is the newest):" $global_height $global_width $global_list "${IMPSRCLIST[@]}" 2>&1 >/dev/tty)
-	if [ $? -ne 0 ]
+	if ! IMPSRCNR=$(dialog --title "$global_title" --backtitle "$global_backtitle" --radiolist "Select the export to import (default is the newest):" "$global_height" "$global_width" "$global_list" "${IMPSRCLIST[@]}" 2>&1 >/dev/tty)
 	 then
-		echo "INFO: no export selected for import" >> $EXPIMPLOGFILE
+		echo "INFO: no export selected for import" >> "$EXPIMPLOGFILE"
 		clear
 		exit 29
 	fi
@@ -71,121 +81,107 @@ if [ ${#IMPSRCDIRS[@]} -gt 1 ]
 	IMPSRCNR=$(echo "$IMPSRCNR" | tr -d '"')
 	IMPSRC=${IMPSRCDIRS[$((IMPSRCNR - 1))]}
 fi
-echo "INFO: import from $IMPSRC" >> $EXPIMPLOGFILE
+echo "INFO: import from $IMPSRC" >> "$EXPIMPLOGFILE"
 
-# set config file
-export exportedtables=$IMPSRC/exported_tables.conf
-
-# set config file
-export exportedtablesok=$IMPSRC/exported_tables_ok.conf
+# set config files
+exportedtables=$IMPSRC/exported_tables.conf
+exportedtablesok=$IMPSRC/exported_tables_ok.conf
 
 # check existing data
-if [ -e $exportedtablesok ]
+if [ -e "$exportedtablesok" ]
  then
-	dialog --title "$global_title" --backtitle "$global_backtitle"  --yes-label "Continue" --no-label "Exit" --yesno  "There are import files in $IMPSRC\nIf you continue these files will be deleted!" $global_height $global_width 
-	CONTINUE=$?
-	for choice in $CONTINUE
-	do
-		case $choice in
-			0)
-				echo "INFO: delete old files" >> $EXPIMPLOGFILE
-				rm $exportedtablesok
-				;;
-			1)
-				echo "INFO: exit because old run detected" >> $EXPIMPLOGFILE
-				exit 21
-				;;
-			# check ESC hit
-			255)	
-				echo "INFO: exit because old run (ESC hit)" >> $EXPIMPLOGFILE
-				exit 21
-				;;
-		esac
-	done
+	dialog --title "$global_title" --backtitle "$global_backtitle"  --yes-label "Continue" --no-label "Exit" --yesno  "There are import files in $IMPSRC\nIf you continue these files will be deleted!" "$global_height" "$global_width"
+	case $? in
+		0)
+			echo "INFO: delete old files" >> "$EXPIMPLOGFILE"
+			rm -f "$exportedtablesok"
+			;;
+		1)
+			echo "INFO: exit because old run detected" >> "$EXPIMPLOGFILE"
+			exit 21
+			;;
+		# check ESC hit
+		*)	
+			echo "INFO: exit because old run (ESC hit)" >> "$EXPIMPLOGFILE"
+			exit 21
+			;;
+	esac
 fi
 
-# build list of OK exports for import
-export templist=$IMPSRC/templist.conf
-[ -e $templist ] && rm $templist
-cat $exportedtables | sed -ne '/^[^#].*/p' >> $templist
-cat $templist | grep RC=0 >> $exportedtablesok 
-cat $templist | grep RC=4 >> $exportedtablesok 
-[ -e $templist ] && rm $templist
-if [ $(cat $exportedtablesok | wc -l) -eq 0 ]
+# build list of OK exports for import (RC=0 or RC=4, order of the export is kept)
+awk -F'|' '!/^#/ && ($2 == "RC=0" || $2 == "RC=4")' "$exportedtables" > "$exportedtablesok"
+if [ ! -s "$exportedtablesok" ]
  then 
-	echo "ERROR: no OK exports found for import" >> $EXPIMPLOGFILE
+	echo "ERROR: no OK exports found for import" >> "$EXPIMPLOGFILE"
 	exit 22
 fi
 
 # set config file and delete old one
-export importtables=$IMPSRC/selected_tables_import.conf
-[ -e $importtables ] && rm $importtables
+importtables=$IMPSRC/selected_tables_import.conf
+rm -f "$importtables"
 
 # select exports to import
-IMPORTEDTABLESCOUNTER=0
-while read IMPORTEDTABLES
+IMPORTLISTITEMS=()
+while IFS='|' read -r IMPORTEDTABLE _
 do
- IMPORTEDTABLESCOUNTER=$(expr $IMPORTEDTABLESCOUNTER + 1)
- IMPORTEDTABLES=$(echo "$IMPORTEDTABLES" | awk -F\| '{ printf $1}')
- IMPORTEDTABLES[$IMPORTEDTABLESCOUNTER]="$IMPORTEDTABLES $IMPORTEDTABLES on"
-done < $exportedtablesok
+ IMPORTLISTITEMS+=("$IMPORTEDTABLE" "$IMPORTEDTABLE" on)
+done < "$exportedtablesok"
 
 # select exported tables for import
-dialog --title "$global_title" --backtitle "$global_backtitle" --separate-output --checklist "Select the exports to import:" $global_height $global_width $global_list ${IMPORTEDTABLES[@]:1:$IMPORTEDTABLESCOUNTER} 2> $importtables
-if [ $? -ne 0 ]
+if ! dialog --title "$global_title" --backtitle "$global_backtitle" --separate-output --checklist "Select the exports to import:" "$global_height" "$global_width" "$global_list" "${IMPORTLISTITEMS[@]}" 2> "$importtables"
  then
-	echo "ERROR: import select error" >> $EXPIMPLOGFILE
+	echo "ERROR: import select error" >> "$EXPIMPLOGFILE"
 	exit 23
 fi
 clear 
-if [ $(cat $importtables | wc -l) -eq 0 ]
+if [ ! -s "$importtables" ]
  then 
-	echo "ERROR: no exports selected for import" >> $EXPIMPLOGFILE
+	echo "ERROR: no exports selected for import" >> "$EXPIMPLOGFILE"
 	exit 24
 fi
 
-if [ $OS == Linux ]
+if [ "$OS" = Linux ]
  then
-  export listcleaner=$IMPSRC/listcleaner.conf
-  sed 's/\"//g' $importtables >> $listcleaner
-  mv $listcleaner $importtables
+  listcleaner=$IMPSRC/listcleaner.conf
+  sed 's/\"//g' "$importtables" > "$listcleaner"
+  mv "$listcleaner" "$importtables"
 fi
 
 # metadata of the source system (written by the export since version 1.10)
-EXPSID=$(expimp_meta $exportedtables SID)
-EXPHOST=$(expimp_meta $exportedtables HOST)
-EXPCLIENTINFO=$(expimp_meta $exportedtables CLIENT)
-EXPUSER=$(expimp_meta $exportedtables USER)
-EXPDATE=$(expimp_meta $exportedtables DATE)
+EXPSID=$(expimp_meta "$exportedtables" SID)
+EXPHOST=$(expimp_meta "$exportedtables" HOST)
+EXPCLIENTINFO=$(expimp_meta "$exportedtables" CLIENT)
+EXPUSER=$(expimp_meta "$exportedtables" USER)
+EXPDATE=$(expimp_meta "$exportedtables" DATE)
 CURHOST=$(hostname)
 
 # verify the SHA-256 checksums of the selected exports
-echo "=== verify checksums ===" >> $EXPIMPLOGFILE
+echo "=== verify checksums ===" >> "$EXPIMPLOGFILE"
 CHECKSUMERROR=""
 while IFS= read -r SELTABLES
 do
- EXPSHA256=$(awk -F'|' -v t="$SELTABLES" '$1 == t { for (i = 2; i <= NF; i++) if ($i ~ /^SHA256=/) { sub(/^SHA256=/, "", $i); print $i } }' $exportedtablesok | tail -1)
+ EXPSHA256=$(awk -F'|' -v t="$SELTABLES" '$1 == t { for (i = 2; i <= NF; i++) if ($i ~ /^SHA256=/) { sub(/^SHA256=/, "", $i); print $i } }' "$exportedtablesok" | tail -1)
  if [ -z "$EXPSID" ]
   then
 	# export of an older version without metadata and checksums
-	echo "$SELTABLES|NO CHECKSUM (export of an older version)" >> $EXPIMPLOGFILE
+	echo "$SELTABLES|NO CHECKSUM (export of an older version)" >> "$EXPIMPLOGFILE"
  elif [ ! -f "$IMPSRC/$SELTABLES.dat" ]
   then
-	echo "$SELTABLES|ERROR data file missing" >> $EXPIMPLOGFILE
+	echo "$SELTABLES|ERROR data file missing" >> "$EXPIMPLOGFILE"
 	CHECKSUMERROR="$CHECKSUMERROR $SELTABLES"
  elif [ -z "$EXPSHA256" ] || [ "$(expimp_sha256 "$IMPSRC/$SELTABLES.dat")" != "$EXPSHA256" ]
   then
-	echo "$SELTABLES|ERROR checksum mismatch" >> $EXPIMPLOGFILE
+	echo "$SELTABLES|ERROR checksum mismatch" >> "$EXPIMPLOGFILE"
 	CHECKSUMERROR="$CHECKSUMERROR $SELTABLES"
  else
-	echo "$SELTABLES|checksum OK" >> $EXPIMPLOGFILE
+	echo "$SELTABLES|checksum OK" >> "$EXPIMPLOGFILE"
  fi
-done < $importtables
-echo "=== verify checksums ===" >> $EXPIMPLOGFILE
+done < "$importtables"
+echo "=== verify checksums ===" >> "$EXPIMPLOGFILE"
 if [ -n "$CHECKSUMERROR" ]
  then
-	echo "ERROR: checksum verification failed:$CHECKSUMERROR" >> $EXPIMPLOGFILE
-	dialog --title "$global_title" --backtitle "$global_backtitle" --ok-label "EXIT" --msgbox "Checksum verification FAILED - nothing was imported!\n\nThe data files of these exports are missing or were changed after the export:\n\n$CHECKSUMERROR\n\nDetails can be found in $EXPIMPLOGFILE" $global_height $global_width
+	echo "ERROR: checksum verification failed:$CHECKSUMERROR" >> "$EXPIMPLOGFILE"
+	dialog --title "$global_title" --backtitle "$global_backtitle" --ok-label "EXIT" --msgbox "Checksum verification FAILED - nothing was imported!\n\nThe data files of these exports are missing or were changed after the export:\n\n$CHECKSUMERROR\n\nDetails can be found in $EXPIMPLOGFILE" "$global_height" "$global_width"
 	clear
 	exit 27
 fi
@@ -205,71 +201,73 @@ if [ -n "$EXPHOST" ] && [ "$EXPHOST" != "$CURHOST" ]
  then
 	IMPORTWARNING="$IMPORTWARNING\nINFO: the export was created on another host ($EXPHOST)\n"
 fi
-IMPORTLIST=$(tr '\n' ' ' < $importtables)
-dialog --title "$global_title" --backtitle "$global_backtitle" --defaultno --yes-label "Import" --no-label "Exit" --yesno "Export: $IMPSRC\n\nYou are going to IMPORT into\n\n  SAPSYSTEM: $SAPSYSTEMNAME | HOST: $CURHOST\n\nThe export was created on\n\n  SAPSYSTEM: ${EXPSID:-unknown} | HOST: ${EXPHOST:-unknown} | CLIENT: ${EXPCLIENTINFO:-unknown}\n  USER: ${EXPUSER:-unknown} | DATE: ${EXPDATE:-unknown}\n$IMPORTWARNING\nSelected exports:\n$IMPORTLIST\n\nThe existing content of these tables will be DELETED and replaced!\n\nContinue with the import?" $global_height $global_width
-if [ $? -ne 0 ]
+IMPORTLIST=$(tr '\n' ' ' < "$importtables")
+if ! dialog --title "$global_title" --backtitle "$global_backtitle" --defaultno --yes-label "Import" --no-label "Exit" --yesno "Export: $IMPSRC\n\nYou are going to IMPORT into\n\n  SAPSYSTEM: $SAPSYSTEMNAME | HOST: $CURHOST\n\nThe export was created on\n\n  SAPSYSTEM: ${EXPSID:-unknown} | HOST: ${EXPHOST:-unknown} | CLIENT: ${EXPCLIENTINFO:-unknown}\n  USER: ${EXPUSER:-unknown} | DATE: ${EXPDATE:-unknown}\n$IMPORTWARNING\nSelected exports:\n$IMPORTLIST\n\nThe existing content of these tables will be DELETED and replaced!\n\nContinue with the import?" "$global_height" "$global_width"
  then
-	echo "INFO: import not confirmed" >> $EXPIMPLOGFILE
+	echo "INFO: import not confirmed" >> "$EXPIMPLOGFILE"
 	clear
 	exit 28
 fi
 if [ "$CONFIRMSID" = yes ]
  then
-	TYPEDSID=$(dialog --title "$global_title" --backtitle "$global_backtitle" --inputbox "The export was created by an older version - the source system and the data files could not be verified!\n\nType the SID of this system ($SAPSYSTEMNAME) to confirm the import:" $global_height $global_width 2>&1 >/dev/tty)
-	if [ $? -ne 0 ] || [ "$TYPEDSID" != "$SAPSYSTEMNAME" ]
+	if ! TYPEDSID=$(dialog --title "$global_title" --backtitle "$global_backtitle" --inputbox "The export was created by an older version - the source system and the data files could not be verified!\n\nType the SID of this system ($SAPSYSTEMNAME) to confirm the import:" "$global_height" "$global_width" 2>&1 >/dev/tty) || [ "$TYPEDSID" != "$SAPSYSTEMNAME" ]
 	 then
-		echo "INFO: import not confirmed (SID not confirmed)" >> $EXPIMPLOGFILE
+		echo "INFO: import not confirmed (SID not confirmed)" >> "$EXPIMPLOGFILE"
 		clear
 		exit 28
 	fi
 fi
 clear
-echo "INFO: import confirmed (source: SID=${EXPSID:-unknown} HOST=${EXPHOST:-unknown} DATE=${EXPDATE:-unknown})" >> $EXPIMPLOGFILE
-
-# export info file
-export importedtables=$IMPSRC/imported_tables.conf
-[ -e $importedtables ] && rm $importedtables
+echo "INFO: import confirmed (source: SID=${EXPSID:-unknown} HOST=${EXPHOST:-unknown} DATE=${EXPDATE:-unknown})" >> "$EXPIMPLOGFILE"
 
 # info file
-echo "# Template name | Return Code of Import" >> $importedtables
-echo "# =====================================" >> $importedtables
-echo "# Imported from:" >> $importedtables
-echo "# "$IMPSRC >> $importedtables
-echo "# =====================================" >> $importedtables
+importedtables=$IMPSRC/imported_tables.conf
+{
+ echo "# Template name | Return Code of Import"
+ echo "# ====================================="
+ echo "# Imported from:"
+ echo "# $IMPSRC"
+ echo "# ====================================="
+} > "$importedtables"
 
 # import tables
-dialog --title "$global_title" --backtitle "$global_backtitle" --progressbox "Import selected tables"  $global_height $global_width < <(
-while read SELTABLES
+dialog --title "$global_title" --backtitle "$global_backtitle" --progressbox "Import selected tables" "$global_height" "$global_width" < <(
+while IFS= read -r SELTABLES
 do
- echo "=== Import START" $SELTABLES "==="
- R3trans -w $IMPSRC/$SELTABLES.imp.log -i $IMPSRC/$SELTABLES.dat
- echo $SELTABLES"|RC="$? >> $importedtables
- echo "=== Import END" $SELTABLES "==="
+ echo "=== Import START $SELTABLES ==="
+ # R3trans error output is shown in the progress box too
+ R3trans -w "$IMPSRC/$SELTABLES.imp.log" -i "$IMPSRC/$SELTABLES.dat" 2>&1
+ echo "$SELTABLES|RC=$?" >> "$importedtables"
+ echo "=== Import END $SELTABLES ==="
  echo ""
  sleep 1
-done < $importtables
-if [ $? -ne 0 ]
- then
-	echo "ERROR: error while import" >> $EXPIMPLOGFILE
-	exit 25
-fi 
-echo "# =====================================" >> $importedtables
+done < "$importtables"
+echo "# =====================================" >> "$importedtables"
 clear
 )
 
 # logfile info
-echo "=== imported tables ===" >> $EXPIMPLOGFILE
-cat $importedtables >> $EXPIMPLOGFILE
-echo "=== imported tables ===" >> $EXPIMPLOGFILE
+{
+ echo "=== imported tables ==="
+ cat "$importedtables"
+ echo "=== imported tables ==="
+} >> "$EXPIMPLOGFILE"
 
 # import info
-dialog --title "$global_title" --backtitle "$global_backtitle" --exit-label "Continue" --textbox $importedtables $global_height $global_width
-if [ $? -ne 0 ]
+if ! dialog --title "$global_title" --backtitle "$global_backtitle" --exit-label "Continue" --textbox "$importedtables" "$global_height" "$global_width"
  then
-	echo "ERROR: import info error" >> $EXPIMPLOGFILE
+	echo "ERROR: import info error" >> "$EXPIMPLOGFILE"
 	exit 26
 fi 
 clear
 
-echo "=== import finished ===" >> $EXPIMPLOGFILE
+# highest return code of R3trans (RC >= 8 is an error)
+IMPMAXRC=$(awk -F'|' '!/^#/ && NF > 1 { rc = $2; sub(/^RC=/, "", rc); if (rc !~ /^[0-9]+$/) rc = 12; if (rc + 0 > max) max = rc + 0 } END { print max + 0 }' "$importedtables")
+if [ "$IMPMAXRC" -ge 8 ]
+ then
+	echo "ERROR: error while import (highest RC=$IMPMAXRC, see imported tables)" >> "$EXPIMPLOGFILE"
+	exit 25
+fi
+
+echo "=== import finished ===" >> "$EXPIMPLOGFILE"
 exit 0

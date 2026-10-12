@@ -26,9 +26,12 @@
 
 $ErrorActionPreference = 'Stop'
 
-# the console UI is already loaded by the main script, load it again if called directly
-if (-not (Get-Command 'Show-UiCheckList' -ErrorAction SilentlyContinue)) {
-    . (Join-Path $PSScriptRoot 'sap_expimp_ui.ps1')
+# the export script must be started by sap_tab_exp_imp.ps1 (config, checks, logfile, console UI)
+if (-not $Global:EXPIMPRUNNING -or -not $Global:EXPIMPLOC -or -not $Global:EXPIMPLOGFILE -or
+    -not (Get-Command 'Show-UiCheckList' -ErrorAction SilentlyContinue)) {
+    Write-Host 'This script must be started by sap_tab_exp_imp.ps1!'
+    Write-Host '... EXIT NOW'
+    exit 90
 }
 
 # R3trans control files must be plain ASCII without BOM
@@ -46,7 +49,9 @@ $templatedir             = Join-Path $Global:global_pwd 'templates'
 $oldrunfiles = @(Get-ExpImpRunFiles)
 if ($oldrunfiles.Count -gt 0) {
     $backupdir = Join-Path (Join-Path $Global:EXPIMPLOC 'backup') (Get-Date -Format 'yyyyMMdd_HHmmss')
-    $continue = Show-UiYesNo -Text "There are files of a previous run in $($Global:EXPIMPLOC)`n`nIf you continue these files will be copied to`n$backupdir`nand then deleted!" -YesLabel 'Continue' -NoLabel 'Exit'
+    $backupkeepinfo = ''
+    if ($Global:BACKUPKEEP -gt 0) { $backupkeepinfo = "`n`nOnly the newest $($Global:BACKUPKEEP) backups are kept (BACKUPKEEP),`nolder backups will be deleted!" }
+    $continue = Show-UiYesNo -Text "There are files of a previous run in $($Global:EXPIMPLOC)`n`nIf you continue these files will be copied to`n$backupdir`nand then deleted!$backupkeepinfo" -YesLabel 'Continue' -NoLabel 'Exit'
     switch ($continue) {
         0 {
             Write-ExpImpLog "INFO: backup old files to $backupdir"
@@ -59,6 +64,19 @@ if ($oldrunfiles.Count -gt 0) {
             }
             Write-ExpImpLog 'INFO: delete old files'
             foreach ($f in $oldrunfiles) { Remove-Item -LiteralPath $f.FullName -Force }
+            # keep only the newest BACKUPKEEP backups (0 = unlimited)
+            if ($Global:BACKUPKEEP -gt 0) {
+                $oldbackups = @(Get-ChildItem -LiteralPath (Join-Path $Global:EXPIMPLOC 'backup') -Directory |
+                    Where-Object { $_.Name -match '^[0-9]{8}_[0-9]{6}\z' } | Sort-Object Name)
+                for ($i = 0; $i -lt ($oldbackups.Count - $Global:BACKUPKEEP); $i++) {
+                    try {
+                        Remove-Item -LiteralPath $oldbackups[$i].FullName -Recurse -Force
+                        Write-ExpImpLog "INFO: delete old backup $($oldbackups[$i].FullName) (BACKUPKEEP=$($Global:BACKUPKEEP))"
+                    } catch {
+                        Write-ExpImpLog "WARNING: cannot delete old backup $($oldbackups[$i].FullName)"
+                    }
+                }
+            }
         }
         1 {
             Write-ExpImpLog 'INFO: exit because old run detected'
@@ -125,6 +143,12 @@ if ($seltables -contains 'STMS_QA') {
 try {
     Start-UiProgressView -Text 'Export SAP Tables'
     foreach ($SELTABLES in $seltables) {
+        $templatefile = Join-Path $templatedir $SELTABLES
+        if (-not (Test-Path -LiteralPath $templatefile)) {
+            Write-Host "=== Export SKIPPED $SELTABLES (template missing) ===" -ForegroundColor Yellow
+            Add-Content -LiteralPath $exportedtables -Value "$SELTABLES|RC=TEMPLATE_MISSING|SHA256=" -Encoding ascii
+            continue
+        }
         $tplfile = Join-Path $Global:EXPIMPLOC "$SELTABLES.tpl"
         $datfile = Join-Path $Global:EXPIMPLOC "$SELTABLES.dat"
         $logfile = Join-Path $Global:EXPIMPLOC "$SELTABLES.exp.log"
@@ -136,7 +160,7 @@ try {
             $tpl.Add("parallel = $($Global:PARALLEL)")
         }
         $tpl.Add("file = '$datfile'")
-        foreach ($line in @(Get-Content -LiteralPath (Join-Path $templatedir $SELTABLES) -ErrorAction SilentlyContinue)) {
+        foreach ($line in @(Get-Content -LiteralPath $templatefile)) {
             $tpl.Add($line)
         }
         Write-AsciiFile -Path $tplfile -Lines $tpl.ToArray()
@@ -178,6 +202,13 @@ if ($rc -ne 0) {
     exit 14
 }
 Clear-Host
+
+# highest return code of R3trans (RC >= 8 or a missing template is an error)
+$maxrc = Get-ExpImpMaxRc -Path $exportedtables
+if ($maxrc -ge 8) {
+    Write-ExpImpLog "ERROR: error while export (highest RC=$maxrc, see exported tables)"
+    exit 13
+}
 
 Write-ExpImpLog '=== export finished ==='
 exit 0

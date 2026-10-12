@@ -26,9 +26,12 @@
 
 $ErrorActionPreference = 'Stop'
 
-# the console UI is already loaded by the main script, load it again if called directly
-if (-not (Get-Command 'Show-UiCheckList' -ErrorAction SilentlyContinue)) {
-    . (Join-Path $PSScriptRoot 'sap_expimp_ui.ps1')
+# the import script must be started by sap_tab_exp_imp.ps1 (config, checks, logfile, console UI)
+if (-not $Global:EXPIMPRUNNING -or -not $Global:EXPIMPLOC -or -not $Global:EXPIMPLOGFILE -or
+    -not (Get-Command 'Show-UiCheckList' -ErrorAction SilentlyContinue)) {
+    Write-Host 'This script must be started by sap_tab_exp_imp.ps1!'
+    Write-Host '... EXIT NOW'
+    exit 90
 }
 
 function Write-AsciiFile {
@@ -284,6 +287,13 @@ if ($rc -ne 0) {
     exit 26
 }
 Clear-Host
+
+# highest return code of R3trans (RC >= 8 is an error)
+$maxrc = Get-ExpImpMaxRc -Path $importedtables
+if ($maxrc -ge 8) {
+    Write-ExpImpLog "ERROR: error while import (highest RC=$maxrc, see imported tables)"
+    exit 25
+}
 
 Write-ExpImpLog '=== import finished ==='
 exit 0

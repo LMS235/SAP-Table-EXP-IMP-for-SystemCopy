@@ -39,6 +39,15 @@ $EXPCLIENT = 'ALL'
 $PARALLEL = 0
 ###########################################
 
+##### CONFIG BACKUPKEEP ##################
+# number of backups of previous runs to keep
+# in EXPIMPLOC\backup (the oldest ones are
+# deleted after a new backup was created)
+# 0 = unlimited (no backup is deleted)
+# Default Value = 0
+$BACKUPKEEP = 0
+###########################################
+
 ##### CONFIG ACCESS GROUP #################
 # windows group that gets access to the
 # export / import location (besides the
@@ -72,7 +81,8 @@ $EXPIMPGROUP = 'SAP_LocalAdmin'
 # 95 - cannot find R3trans.exe
 # 94 - cannot create export location / location not writable
 # 92 - user is not <sid>adm
-# 91 - invalid config value (EXPIMPLOC, EXPCLIENT, PARALLEL)
+# 90 - export / import script started directly (not by sap_tab_exp_imp.ps1)
+# 91 - invalid config value (EXPIMPLOC, EXPCLIENT, PARALLEL, BACKUPKEEP)
 # export
 # 10 - exit because old run detected
 # 11 - fail to select templates for export
@@ -165,8 +175,17 @@ if ("$PARALLEL" -notmatch '^[0-9]+\z') {
     exit 91
 }
 
-$Global:EXPCLIENT = $EXPCLIENT
-$Global:PARALLEL  = [int]$PARALLEL
+# BACKUPKEEP check empty variable
+if ($null -eq $BACKUPKEEP -or "$BACKUPKEEP" -eq '') { $BACKUPKEEP = 0 }
+if ("$BACKUPKEEP" -notmatch '^[0-9]+\z') {
+    Write-Host "BACKUPKEEP '$BACKUPKEEP' is invalid (allowed: 0 = unlimited or a positive number)"
+    Write-Host '... EXIT NOW'
+    exit 91
+}
+
+$Global:EXPCLIENT  = $EXPCLIENT
+$Global:PARALLEL   = [int]$PARALLEL
+$Global:BACKUPKEEP = [int]$BACKUPKEEP
 
 # check export location
 if ([string]::IsNullOrWhiteSpace($EXPIMPLOC)) {
@@ -258,7 +277,7 @@ EXPORT or IMPORT Tables?
 INFO: $($Global:EXPIMPLOCINFO)
 INFO: $($Global:EXPIMPLOC)
 
-CLIENT: $($Global:EXPCLIENT) | PARALLEL: $($Global:PARALLEL)
+CLIENT: $($Global:EXPCLIENT) | PARALLEL: $($Global:PARALLEL) | BACKUPKEEP: $($Global:BACKUPKEEP)
 OS: $($Global:global_os) | USER: $($Global:CURUSER) | SAPSYSTEM: $($env:SAPSYSTEMNAME)
 
 $($Global:global_copy)
@@ -280,26 +299,48 @@ if ($choice.Cancelled) {
 }
 
 # EXPORT or IMPORT
-$EXPIMPRUNRC = 0
-$EXPIMPRUN   = ''
+# an unexpected error in the export / import script ends with RC 13 / 25 and is shown in the summary
+$EXPIMPRUNRC   = 0
+$EXPIMPRUN     = ''
+$EXPIMPRUNERR  = ''
+$Global:EXPIMPRUNNING = $true
 switch ($choice.Tag) {
     'EXPORT' {
         Write-ExpImpLog 'Export SAP Tables'
-        & (Join-Path $Global:global_pwd 'script\sap_export_tables.ps1')
-        $EXPIMPRUNRC = $LASTEXITCODE
-        $EXPIMPRUN   = 'Export procedure finished with RC='
+        $EXPIMPRUN = 'Export procedure finished with RC='
+        try {
+            & (Join-Path $Global:global_pwd 'script\sap_export_tables.ps1')
+            $EXPIMPRUNRC = $LASTEXITCODE
+        } catch {
+            $EXPIMPRUNRC  = 13
+            $EXPIMPRUNERR = $_.Exception.Message
+            Write-ExpImpLog "ERROR: unexpected error while export ($EXPIMPRUNERR)"
+        }
     }
     'IMPORT' {
         Write-ExpImpLog 'Import SAP Tables'
-        & (Join-Path $Global:global_pwd 'script\sap_import_tables.ps1')
-        $EXPIMPRUNRC = $LASTEXITCODE
-        $EXPIMPRUN   = 'Import procedure finished with RC='
+        $EXPIMPRUN = 'Import procedure finished with RC='
+        try {
+            & (Join-Path $Global:global_pwd 'script\sap_import_tables.ps1')
+            $EXPIMPRUNRC = $LASTEXITCODE
+        } catch {
+            $EXPIMPRUNRC  = 25
+            $EXPIMPRUNERR = $_.Exception.Message
+            Write-ExpImpLog "ERROR: unexpected error while import ($EXPIMPRUNERR)"
+        }
     }
 }
+$Global:EXPIMPRUNNING = $false
 if ($null -eq $EXPIMPRUNRC) { $EXPIMPRUNRC = 0 }
 
 # summary
-[void](Show-UiMsgBox -Text "$EXPIMPRUN$EXPIMPRUNRC`n`nLogfiles can be found in $($Global:EXPIMPLOC)" -OkLabel 'EXIT')
+$EXPIMPRUNINFO = ''
+if ($EXPIMPRUNERR) {
+    $EXPIMPRUNINFO = "`n`nERROR: unexpected error:`n$EXPIMPRUNERR"
+} elseif ($EXPIMPRUNRC -eq 13 -or $EXPIMPRUNRC -eq 25) {
+    $EXPIMPRUNINFO = "`n`nERROR: at least one table failed (R3trans RC >= 8 or template missing)!`nPlease check the R3trans log files (*.exp.log / *.imp.log)."
+}
+[void](Show-UiMsgBox -Text "$EXPIMPRUN$EXPIMPRUNRC$EXPIMPRUNINFO`n`nLogfiles can be found in $($Global:EXPIMPLOC)" -OkLabel 'EXIT')
 
 # exit
 Clear-Host

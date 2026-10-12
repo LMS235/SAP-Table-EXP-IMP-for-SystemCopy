@@ -120,6 +120,22 @@ function Get-ExpImpSha256 {
     return (Get-FileHash -LiteralPath $Path -Algorithm SHA256).Hash.ToLower()
 }
 
+# highest R3trans return code in an info file ("NAME|RC=n|..."),
+# a non-numeric return code (e.g. TEMPLATE_MISSING) counts as 12
+function Get-ExpImpMaxRc {
+    param([string]$Path)
+    $max = 0
+    foreach ($line in @(Get-Content -LiteralPath $Path)) {
+        if ($line -match '^#') { continue }
+        $f = $line -split '\|'
+        if ($f.Count -lt 2 -or -not $f[1].StartsWith('RC=')) { continue }
+        $rc = $f[1].Substring(3)
+        if ($rc -match '^[0-9]+\z') { $rc = [int]$rc } else { $rc = 12 }
+        if ($rc -gt $max) { $max = $rc }
+    }
+    return $max
+}
+
 # value of a metadata line "# KEY=value" in an info file
 function Get-ExpImpMeta {
     param([string]$Path, [string]$Key)
