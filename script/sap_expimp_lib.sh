@@ -5,6 +5,7 @@
 # www.florian-lamml.de
 # helper functions (shared by main / export / import script)
 # Version 1.10 - Security Hardening
+# Version 2.0 - komplett überarbeitet mit neuen Funktionen und Sicherheitsoptionen
 
 # find a tool for SHA-256 checksums (sha256sum on Linux, csum or openssl on AIX)
 # prints the tool name, returns 1 if no usable tool was found
