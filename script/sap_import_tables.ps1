@@ -159,6 +159,7 @@ $importlist = @($seltables)
 # verify the SHA-256 checksums of the selected exports
 Write-ExpImpLog '=== verify checksums ==='
 $checksumerror = @()
+$checksumerrorlist = ''
 foreach ($imptable in $importlist) {
     $datfile = Join-Path $impsrc "$imptable.dat"
     $expsha  = ''
@@ -174,9 +175,11 @@ foreach ($imptable in $importlist) {
     } elseif (-not (Test-Path -LiteralPath $datfile)) {
         Write-ExpImpLog "$imptable|ERROR data file missing"
         $checksumerror += $imptable
+        $checksumerrorlist += "`n  $imptable (data file missing)"
     } elseif (-not $expsha -or (Get-ExpImpSha256 -Path $datfile) -ne $expsha) {
         Write-ExpImpLog "$imptable|ERROR checksum mismatch"
         $checksumerror += $imptable
+        $checksumerrorlist += "`n  $imptable (checksum mismatch - data file changed)"
     } else {
         Write-ExpImpLog "$imptable|checksum OK"
     }
@@ -184,7 +187,7 @@ foreach ($imptable in $importlist) {
 Write-ExpImpLog '=== verify checksums ==='
 if ($checksumerror.Count -gt 0) {
     Write-ExpImpLog "ERROR: checksum verification failed: $($checksumerror -join ' ')"
-    [void](Show-UiMsgBox -Text "Checksum verification FAILED - nothing was imported!`n`nThe data files of these exports are missing or were changed after the export:`n`n$($checksumerror -join ' ')`n`nDetails can be found in $($Global:EXPIMPLOGFILE)" -OkLabel 'EXIT')
+    [void](Show-UiMsgBox -Text "Checksum verification FAILED - nothing was imported!`n`nThe data files of these exports are missing or were changed after the export:`n$checksumerrorlist`n`nDetails can be found in $($Global:EXPIMPLOGFILE)" -OkLabel 'EXIT')
     exit 27
 }
 

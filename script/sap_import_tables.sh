@@ -158,6 +158,7 @@ CURHOST=$(hostname)
 # verify the SHA-256 checksums of the selected exports
 echo "=== verify checksums ===" >> "$EXPIMPLOGFILE"
 CHECKSUMERROR=""
+CHECKSUMERRORLIST=""
 while IFS= read -r SELTABLES
 do
  EXPSHA256=$(awk -F'|' -v t="$SELTABLES" '$1 == t { for (i = 2; i <= NF; i++) if ($i ~ /^SHA256=/) { sub(/^SHA256=/, "", $i); print $i } }' "$exportedtablesok" | tail -1)
@@ -169,10 +170,12 @@ do
   then
 	echo "$SELTABLES|ERROR data file missing" >> "$EXPIMPLOGFILE"
 	CHECKSUMERROR="$CHECKSUMERROR $SELTABLES"
+	CHECKSUMERRORLIST="$CHECKSUMERRORLIST\n  $SELTABLES (data file missing)"
  elif [ -z "$EXPSHA256" ] || [ "$(expimp_sha256 "$IMPSRC/$SELTABLES.dat")" != "$EXPSHA256" ]
   then
 	echo "$SELTABLES|ERROR checksum mismatch" >> "$EXPIMPLOGFILE"
 	CHECKSUMERROR="$CHECKSUMERROR $SELTABLES"
+	CHECKSUMERRORLIST="$CHECKSUMERRORLIST\n  $SELTABLES (checksum mismatch - data file changed)"
  else
 	echo "$SELTABLES|checksum OK" >> "$EXPIMPLOGFILE"
  fi
@@ -181,7 +184,7 @@ echo "=== verify checksums ===" >> "$EXPIMPLOGFILE"
 if [ -n "$CHECKSUMERROR" ]
  then
 	echo "ERROR: checksum verification failed:$CHECKSUMERROR" >> "$EXPIMPLOGFILE"
-	expimp_dialog --title "$global_title" --backtitle "$global_backtitle" --ok-label "EXIT" --msgbox "Checksum verification FAILED - nothing was imported!\n\nThe data files of these exports are missing or were changed after the export:\n\n$CHECKSUMERROR\n\nDetails can be found in $EXPIMPLOGFILE" @H@ @W@
+	expimp_dialog --title "$global_title" --backtitle "$global_backtitle" --ok-label "EXIT" --msgbox "Checksum verification FAILED - nothing was imported!\n\nThe data files of these exports are missing or were changed after the export:\n$CHECKSUMERRORLIST\n\nDetails can be found in $EXPIMPLOGFILE" @H@ @W@
 	clear
 	exit 27
 fi
