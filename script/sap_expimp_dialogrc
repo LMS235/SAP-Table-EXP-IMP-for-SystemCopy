@@ -1,0 +1,45 @@
+# SAP(R) Table EXP/IMP for SystemCopy (c) Florian Lamml 2026
+# www.florian-lamml.de
+# color scheme for 'dialog' (used via DIALOGRC by sap_tab_exp_imp.sh)
+# - the default colors of older dialog versions (e.g. 1.2 on AIX, SLES) use bold
+#   yellow / green / cyan on white (title, tags, scroll position) - hard to read
+# - this scheme uses only dark colors on white and white on blue (no bold on white,
+#   because many terminals show bold as a bright color)
+# - only variables known by older dialog versions are used (unknown variables stop dialog)
+# - an own color scheme can be used by setting DIALOGRC before the start
+use_shadow = ON
+use_colors = ON
+screen_color = (WHITE,BLUE,ON)
+shadow_color = (BLACK,BLACK,ON)
+dialog_color = (BLACK,WHITE,OFF)
+title_color = (BLUE,WHITE,OFF)
+border_color = (BLACK,WHITE,OFF)
+button_active_color = (WHITE,BLUE,ON)
+button_inactive_color = (BLACK,WHITE,OFF)
+button_key_active_color = (WHITE,BLUE,ON)
+button_key_inactive_color = (RED,WHITE,OFF)
+button_label_active_color = (WHITE,BLUE,ON)
+button_label_inactive_color = (BLACK,WHITE,OFF)
+inputbox_color = (BLACK,WHITE,OFF)
+inputbox_border_color = (BLACK,WHITE,OFF)
+searchbox_color = (BLACK,WHITE,OFF)
+searchbox_title_color = (BLUE,WHITE,OFF)
+searchbox_border_color = (BLACK,WHITE,OFF)
+position_indicator_color = (BLUE,WHITE,OFF)
+menubox_color = (BLACK,WHITE,OFF)
+menubox_border_color = (BLACK,WHITE,OFF)
+item_color = (BLACK,WHITE,OFF)
+item_selected_color = (WHITE,BLUE,ON)
+tag_color = (BLUE,WHITE,OFF)
+tag_selected_color = (WHITE,BLUE,ON)
+tag_key_color = (RED,WHITE,OFF)
+tag_key_selected_color = (WHITE,BLUE,ON)
+check_color = (BLACK,WHITE,OFF)
+check_selected_color = (WHITE,BLUE,ON)
+uarrow_color = (BLUE,WHITE,OFF)
+darrow_color = (BLUE,WHITE,OFF)
+itemhelp_color = (WHITE,BLACK,OFF)
+form_active_text_color = (WHITE,BLUE,ON)
+form_text_color = (BLACK,WHITE,OFF)
+form_item_readonly_color = (BLACK,WHITE,OFF)
+gauge_color = (BLUE,WHITE,OFF)
