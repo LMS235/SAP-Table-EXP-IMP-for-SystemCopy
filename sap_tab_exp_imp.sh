@@ -333,6 +333,14 @@ export LIBPATH="$LIBPATH:$global_pwd/dialogaix/lib"
 chmod u+x "$global_pwd/dialogaix/bin/dialog"
 fi
 
+# readable color scheme for dialog (the defaults of older dialog versions use bold
+# yellow on white) - an own color scheme can be used by setting DIALOGRC before the start
+if [ -z "$DIALOGRC" ] && [ -r "$global_pwd/script/sap_expimp_dialogrc" ]
+then
+	DIALOGRC="$global_pwd/script/sap_expimp_dialogrc"
+fi
+export DIALOGRC
+
 # check if dialog is running
 if ! dialog > /dev/null 2>&1;
  then

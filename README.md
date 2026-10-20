@@ -36,6 +36,11 @@ The script can be started from any directory (`/path/to/sap_tab_exp_imp.sh`). Th
 at most 45 x 80 characters and are limited to the size of the terminal; the ASCII art of the
 start dialog is only shown if the terminal is high enough.
 
+The dialogs use their own readable color scheme (`script/sap_expimp_dialogrc`: dark text on
+white, white on blue - no bold yellow on white as in the defaults of older `dialog` versions).
+To use another color scheme set `DIALOGRC` before the start
+(e.g. `DIALOGRC=~/.dialogrc ./sap_tab_exp_imp.sh`).
+
 > [!NOTE]
 > Version 2.0 was tested on Linux (SLES for SAP 15 SP7, `dialog` 1.3).
 
@@ -85,6 +90,7 @@ Keys in the console UI:
 | `script/sap_export_tables.sh` | export script (Unix / Linux / AIX) |
 | `script/sap_import_tables.sh` | import script (Unix / Linux / AIX) |
 | `script/sap_expimp_lib.sh` | helper functions (Unix / Linux / AIX) |
+| `script/sap_expimp_dialogrc` | color scheme for `dialog` (Unix / Linux / AIX) |
 | `sap_tab_exp_imp.ps1` | main script (Windows) |
 | `script/sap_export_tables.ps1` | export script (Windows) |
 | `script/sap_import_tables.ps1` | import script (Windows) |
