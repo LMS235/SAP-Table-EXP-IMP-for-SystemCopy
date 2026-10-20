@@ -24,7 +24,8 @@
 # Version 1.9   - PowerShell Port for Windows
 # Version 1.9.1 - Correct VSCAN Template
 # Version 1.10  - Security Hardening (permissions, checksums, target check, backup, user and config check)
-# Version 2.0 - komplett überarbeitet mit neuen Funktionen und Sicherheitsoptionen
+# Version 2.0 - Completely redesigned with new features and security options
+# Version 2.0.1 - Customizing Dialog Box Colors
 
 # --- key codes -----------------------------------------------------------
 $Global:UiKeyEnter = 13
