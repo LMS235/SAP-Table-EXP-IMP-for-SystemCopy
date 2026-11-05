@@ -1,0 +1,6 @@
+delete from TBDLSMATRIX
+select * from TBDLSMATRIX
+delete from TBDLSMATRIXPAIRS
+select * from TBDLSMATRIXPAIRS
+delete from TBDLSMATRIXT
+select * from TBDLSMATRIXT
