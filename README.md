@@ -19,6 +19,21 @@ A simple script for exporting and importing SAP tables during a system copy.
   resize of the window (also older `dialog` versions), the R3trans output is shown in the progress
   box, Cancel can be selected with `TAB` (Windows)
 
+## What's new in version 2.0.2
+
+* **Result:** ESC in the overview of the exported / imported tables only closes the overview -
+  a failed table always ends with exit code 13 / 25
+* **Dialogs:** an error of `dialog` (terminal too small, invalid `DIALOGRC`) is shown while it is
+  started again (Unix); long texts (e.g. the confirmation of the import) can be scrolled and the
+  buttons are always visible, in the selection lists with one choice the marked entry always is
+  the entry of the cursor (Windows)
+* **Security:** permissions are only changed for the files of this tool, never for other files in
+  `EXPIMPLOC`; `STRICT` stops if `EXPIMPLOC` itself is writable by others; `R3trans` is checked
+  before the start (Unix); the library path of the included `dialog` is only set for `dialog` (AIX)
+* **Compatibility:** the Unix version reads info files written by the Windows version (CRLF),
+  `PARALLEL` / `BACKUPKEEP` with a leading zero are read as decimal numbers
+* **Speed:** no waiting time after every table, the Windows UI only writes the rows that changed
+
 <img width="711" height="519" alt="SAP-Table-EXP-IMP-for-SystemCopy" src="https://github.com/user-attachments/assets/13697342-5638-4b1c-a334-342589b8a43d" />
 
 ## Unix / Linux / AIX
@@ -29,8 +44,9 @@ A simple script for exporting and importing SAP tables during a system copy.
 >
 > `sap_tab_exp_imp.sh must be executable (e.g. chmod u+x sap_tab_exp_imp.sh)`
 
-Needs the `dialog` command (a prebuilt `dialog` for AIX is included in `dialogaix`)
-and a tool for SHA-256 checksums (`sha256sum`, `shasum`, `csum` or `openssl`).
+Needs the `dialog` command (a prebuilt `dialog` for AIX is included in `dialogaix`),
+a tool for SHA-256 checksums (`sha256sum`, `shasum`, `csum` or `openssl`) and
+`R3trans` in the `PATH` (it is when you are logged on as `<sid>adm`).
 
 The script can be started from any directory (`/path/to/sap_tab_exp_imp.sh`). The dialogs use
 at most 45 x 80 characters and are limited to the size of the terminal; the ASCII art of the
@@ -40,6 +56,9 @@ The dialogs use their own readable color scheme (`script/sap_expimp_dialogrc`: d
 white, white on blue - no bold yellow on white as in the defaults of older `dialog` versions).
 To use another color scheme set `DIALOGRC` before the start
 (e.g. `DIALOGRC=~/.dialogrc ./sap_tab_exp_imp.sh`).
+
+If `dialog` ends with an error (e.g. the terminal is too small or `DIALOGRC` is invalid), the
+error is shown and `dialog` is started again every second (at most 300 times, cancel with `CTRL+C`).
 
 > [!NOTE]
 > Version 2.0 was tested on Linux (SLES for SAP 15 SP7, `dialog` 1.3).
@@ -74,9 +93,9 @@ Keys in the console UI:
 
 | Key | Function |
 | --- | --- |
-| `UP` / `DOWN` / `PGUP` / `PGDN` / `HOME` / `END` | move |
+| `UP` / `DOWN` / `PGUP` / `PGDN` / `HOME` / `END` | move (list with one choice: the entry of the cursor is the selected entry), scroll a long text |
 | `LEFT` / `RIGHT` | scroll horizontally (text box) |
-| `SPACE` | select / toggle |
+| `SPACE` | toggle (checklist) |
 | `A` / `N` | select all / none (checklist) |
 | `TAB` / `LEFT` / `RIGHT` | switch between the buttons (OK / Cancel, Yes / No) |
 | `ENTER` | confirm the selected button |
@@ -96,6 +115,7 @@ Keys in the console UI:
 | `script/sap_import_tables.ps1` | import script (Windows) |
 | `script/sap_expimp_ui.ps1` | console UI for Windows (replaces `dialog`) |
 | `templates/*` | R3trans table templates (used by both versions) |
+| `tests/*` | tests of both versions with stand-ins for `R3trans` (run by GitHub Actions, not needed to use the tool) |
 
 ## Config
 
@@ -106,8 +126,8 @@ Both main scripts have the same config options at the top:
 | `EXPIMPLOC` | export / import location (absolute path), default `<script dir>/expimp/<SID>` |
 | `ADDSIDTOEXPIMP` | `TRUE` / `FALSE`, default `TRUE`: the SID is added to a set `EXPIMPLOC` if it does not end with the SID (`/tmp/expimp` → `/tmp/expimp/<SID>`) |
 | `EXPCLIENT` | `ALL`, `DEFAULT` or a 3-digit client number, default `ALL` |
-| `PARALLEL` | R3trans parallel parameter (SAP note 1127194), `0` or a positive number, default `0` |
-| `BACKUPKEEP` | number of backups of previous runs to keep in `EXPIMPLOC/backup`, `0` = unlimited, default `0` |
+| `PARALLEL` | R3trans parallel parameter (SAP note 1127194), `0` or a positive number (at most 9 digits), default `0` |
+| `BACKUPKEEP` | number of backups of previous runs to keep in `EXPIMPLOC/backup`, `0` = unlimited (at most 9 digits), default `0` |
 | `EXPIMPPERM` | Unix only: `STRICT` (files `660`, directories `770`, checks) or `OPEN` (files `666`, directories `777`, no checks), default `STRICT` |
 | `EXPIMPGROUP` | Windows only: group with access to `EXPIMPLOC` (e.g. other `<sid>adm` users), default `SAP_LocalAdmin` |
 
@@ -115,7 +135,8 @@ Invalid values stop the script with exit code 91.
 
 Windows: text values must be in quotes (e.g. `$EXPCLIENT = '100'`), `PARALLEL` and `BACKUPKEEP`
 must be digits only (PowerShell would read e.g. `0x10` as 16) - an error in the config block also
-ends the script with exit code 91.
+ends the script with exit code 91. `EXPIMPLOC` must only contain ASCII characters (the path is
+written into the R3trans control files).
 
 > [!NOTE]
 > To import the export of **another** system from a shared location (e.g. export as `tstadm`,
@@ -132,16 +153,22 @@ ends the script with exit code 91.
 * Unix: the permissions are set by `EXPIMPPERM` (see Config):
   * `STRICT` (default): files `660`, directories `770` (`umask 007`), so the export and the import
     can be run by different `<sid>adm` users of the same group (`sapsys`), but nobody else has access.
-    The script stops if `EXPIMPLOC` contains files of another group or files writable by others.
+    The script stops if `EXPIMPLOC` contains files of another group or files writable by others,
+    or if `EXPIMPLOC` itself is writable by others (allowed with sticky bit, e.g. `/tmp`).
   * `OPEN`: files `666`, directories `777`, no permission checks - e.g. for NFS v3 shares with
     different UIDs / GIDs on the hosts. **Every user of the host can read the exports (PSEs,
     secure storage ...) and can replace the data files together with `exported_tables.conf`** -
     the checksums then only protect against accidental changes. Use `STRICT` wherever possible.
   * An existing directory `EXPIMPLOC` may belong to another user / group, it only has to be
     writable for `<sid>adm`.
+  * Permissions are only changed for the files of this tool that belong to the current user
+    (files of previous runs, logfiles, `backup`) - other files in `EXPIMPLOC` and links are
+    checked (`STRICT`), but never changed.
 * Windows: `EXPIMPLOC` gets its own permissions without inheritance: full control for the current user,
   Administrators and SYSTEM, modify for `EXPIMPGROUP`. If the permissions cannot be set (e.g. the
   directory belongs to another user), only a warning is shown - `EXPIMPLOC` only has to be writable.
+  The permissions are only set if `EXPIMPLOC` contains nothing but the files of this tool (files of
+  previous runs, logfiles, `backup`) - otherwise they are not changed and a warning is shown.
 * Every export writes the SHA-256 checksum of each data file and the source system
   (SID, host, client, user, date) into `exported_tables.conf`.
 * Before the import the checksums are verified (exit code 27 if a data file is missing or was changed)
@@ -164,7 +191,8 @@ ends the script with exit code 91.
 * **Export:** select the templates (empty templates are marked with `(empty)`), the progress box
   shows "Export 5/10: NAME", the R3trans output, the return code and a progress bar
   `[##########..........] 5/10 (50%)`. The overview shows every template with its return code
-  and checksum (`NAME|RC=0|SHA256=...`).
+  and checksum (`NAME|RC=0|SHA256=...`). ESC only closes the overview, it does not change the
+  exit code.
 * **Import:** select the export (current export or a backup), select the exports (only exports
   with RC 0 or 4 are offered), checksum check, confirmation, progress box like the export.
 * **Return codes:** RC 0 and 4 of R3trans are OK, RC >= 8 is an error (exit code 13 / 25 and a hint
@@ -182,8 +210,8 @@ ends the script with exit code 91.
 | 98 | cannot find SAP SID |
 | 97 | cannot start `dialog` (Unix) / the console UI (Windows) |
 | 96 | hit ESC |
-| 95 | cannot find `R3trans.exe` (Windows only) |
-| 94 | cannot create the export location / not writable (Unix `STRICT`: files of another group / writable by others) |
+| 95 | cannot find `R3trans` (Unix) / `R3trans.exe` (Windows) in the `PATH` |
+| 94 | cannot create the export location / not writable (Unix `STRICT`: files of another group / writable by others, `EXPIMPLOC` writable by others) |
 | 93 | no SHA-256 tool found (Unix only) |
 | 92 | user is not `<sid>adm` |
 | 91 | invalid config value (`EXPIMPLOC`, `ADDSIDTOEXPIMP`, `EXPCLIENT`, `PARALLEL`, `BACKUPKEEP`, `EXPIMPPERM`) / Windows: error in the config block |
@@ -192,7 +220,7 @@ ends the script with exit code 91.
 | 11 | export: fail to select templates for export |
 | 12 | export: no template selected for export |
 | 13 | export: error while export (R3trans RC >= 8 or template missing; Windows: also an unexpected error) |
-| 14 | export: export info error |
+| 14 | export: export info error (Unix only: `dialog` error while showing the overview) |
 | 15 | export: backup of the previous run failed |
 | 20 | import: no exports found for import |
 | 21 | import: exit because old run detected |
@@ -200,7 +228,7 @@ ends the script with exit code 91.
 | 23 | import: import select error |
 | 24 | import: no exports selected for import |
 | 25 | import: error while import (R3trans RC >= 8; Windows: also an unexpected error) |
-| 26 | import: import info error |
+| 26 | import: import info error (Unix only: `dialog` error while showing the overview) |
 | 27 | import: checksum verification failed (data file missing or changed, nothing was imported) |
 | 28 | import: import not confirmed |
 | 29 | import: no export selected for import (current export / backup) |

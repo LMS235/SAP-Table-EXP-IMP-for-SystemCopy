@@ -25,6 +25,7 @@
 # Version 1.10  - Security Hardening (permissions, checksums, target check, backup, user and config check)
 # Version 2.0 - Completely redesigned with new features and security options
 # Version 2.0.1 - Customizing Dialog Box Colors
+# Version 2.0.2 - Some Improvements
 
 # errors in the config block are checked after it (see below)
 $Error.Clear()
@@ -102,7 +103,7 @@ $EXPIMPGROUP = 'SAP_LocalAdmin'
 # 11 - fail to select templates for export
 # 12 - no template selected for export
 # 13 - error while export (R3trans RC >= 8, template missing or unexpected error)
-# 14 - export info error
+# 14 - export info error (Unix only)
 # 15 - backup of the previous run failed
 # import
 # 20 - no exports found for import
@@ -111,7 +112,7 @@ $EXPIMPGROUP = 'SAP_LocalAdmin'
 # 23 - import select error
 # 24 - no exports selected for import
 # 25 - error while import (R3trans RC >= 8 or unexpected error)
-# 26 - import info error
+# 26 - import info error (Unix only)
 # 27 - checksum verification failed
 # 28 - import not confirmed
 # 29 - no export selected for import
@@ -123,7 +124,7 @@ foreach ($cfgline in @(Get-Content -LiteralPath $PSCommandPath)) {
     if ($cfgline -match '^\s*\$(PARALLEL|BACKUPKEEP)\s*=\s*(.*?)\s*(#.*)?$') {
         $cfgname  = $Matches[1]
         $cfgvalue = $Matches[2] -replace "^'(.*)'$", '$1' -replace '^"(.*)"$', '$1'
-        if ($cfgvalue -notmatch '^[0-9]+\z') {
+        if ($cfgvalue -notmatch '^[0-9]{1,9}\z') {
             Write-Host "$cfgname '$cfgvalue' is invalid (allowed: 0 or a positive number)"
             Write-Host '... EXIT NOW'
             exit 91
@@ -207,7 +208,7 @@ if ($EXPCLIENT -notmatch '^(ALL|DEFAULT|[0-9]{3})\z') {
 
 # PARALLEL check empty variable
 if ($null -eq $PARALLEL -or "$PARALLEL" -eq '') { $PARALLEL = 0 }
-if ("$PARALLEL" -notmatch '^[0-9]+\z') {
+if ("$PARALLEL" -notmatch '^[0-9]{1,9}\z') {
     Write-Host "PARALLEL '$PARALLEL' is invalid (allowed: 0 or a positive number)"
     Write-Host '... EXIT NOW'
     exit 91
@@ -215,7 +216,7 @@ if ("$PARALLEL" -notmatch '^[0-9]+\z') {
 
 # BACKUPKEEP check empty variable
 if ($null -eq $BACKUPKEEP -or "$BACKUPKEEP" -eq '') { $BACKUPKEEP = 0 }
-if ("$BACKUPKEEP" -notmatch '^[0-9]+\z') {
+if ("$BACKUPKEEP" -notmatch '^[0-9]{1,9}\z') {
     Write-Host "BACKUPKEEP '$BACKUPKEEP' is invalid (allowed: 0 = unlimited or a positive number)"
     Write-Host '... EXIT NOW'
     exit 91
@@ -257,6 +258,12 @@ if ($Global:EXPIMPLOC -match "['\r\n]") {
     Write-Host '... EXIT NOW'
     exit 91
 }
+# the path is written into the R3trans control files (plain ASCII)
+if ($Global:EXPIMPLOC -match '[^\x20-\x7E]') {
+    Write-Host "EXPIMPLOC '$($Global:EXPIMPLOC)' is invalid (only ASCII characters are allowed)"
+    Write-Host '... EXIT NOW'
+    exit 91
+}
 if ($Global:EXPIMPLOC -notmatch '^([A-Za-z]:\\|\\\\)') {
     Write-Host "EXPIMPLOC '$($Global:EXPIMPLOC)' is invalid (must be an absolute path like D:\expimp or \\server\share)"
     Write-Host '... EXIT NOW'
@@ -284,9 +291,22 @@ try {
     Write-Host '... EXIT NOW'
     exit 94
 }
-$aclWarning = Protect-ExpImpLocation -Path $Global:EXPIMPLOC -Group $EXPIMPGROUP
-if ($aclWarning -eq 'ERROR') {
-    $aclWarning = "cannot set the permissions of $($Global:EXPIMPLOC) - please check them manually"
+# the permissions are only set if EXPIMPLOC contains nothing but the files of this tool
+# (files of previous runs, logfiles, backups) - the permissions of a directory with
+# other data are never changed
+$foreignitems = $null
+try {
+    $foreignitems = @(Get-ChildItem -LiteralPath $Global:EXPIMPLOC -Force | Where-Object { -not (Test-ExpImpOwnItem -Item $_) })
+} catch { }
+if ($null -eq $foreignitems) {
+    $aclWarning = "cannot read the content of $($Global:EXPIMPLOC) - the permissions were not changed, please check them manually"
+} elseif ($foreignitems.Count -gt 0) {
+    $aclWarning = "$($Global:EXPIMPLOC) contains files that do not belong to this tool (e.g. $($foreignitems[0].Name)) - the permissions were not changed, please check them manually"
+} else {
+    $aclWarning = Protect-ExpImpLocation -Path $Global:EXPIMPLOC -Group $EXPIMPGROUP
+    if ($aclWarning -eq 'ERROR') {
+        $aclWarning = "cannot set the permissions of $($Global:EXPIMPLOC) - please check them manually"
+    }
 }
 
 # set logfile

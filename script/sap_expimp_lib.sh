@@ -29,6 +29,7 @@
 # Version 1.10  - Security Hardening (permissions, checksums, target check, backup, user and config check)
 # Version 2.0 - Completely redesigned with new features and security options
 # Version 2.0.1 - Customizing Dialog Box Colors
+# Version 2.0.2 - Some Improvements
 
 # find a tool for SHA-256 checksums (sha256sum on Linux, csum or openssl on AIX)
 # prints the tool name, returns 1 if no usable tool was found
@@ -57,8 +58,9 @@ expimp_sha256() {
 }
 
 # value of a metadata line "# KEY=value" in an info file
+# (a carriage return at the end is removed - info files written by the windows version)
 expimp_meta() {
- sed -n "s/^# $2=//p" "$1" | head -1
+ sed -n "s/^# $2=//p" "$1" | head -1 | tr -d '\r'
 }
 
 # files of a previous export / import run in EXPIMPLOC (one per line)
@@ -72,26 +74,64 @@ expimp_run_files() {
  done
 }
 
+# set the permissions of the files of this tool in EXPIMPLOC that belong to the current
+# user (files of previous runs, logfiles, temporary files, backups) - links and all other
+# files in EXPIMPLOC are never changed (e.g. if EXPIMPLOC is a directory with other data)
+# $1 = mode for chmod, returns 1 if a permission cannot be set
+expimp_chmod_own() {
+ local mode=$1 f rc=0
+ while IFS= read -r f
+ do
+  [ -L "$f" ] || [ ! -O "$f" ] || chmod "$mode" "$f" || rc=1
+ done < <(
+  expimp_run_files
+  for f in "$EXPIMPLOC"/EXP_IMP_LOG_*.txt "$EXPIMPLOC"/.expimp_dialog_*
+  do
+   [ -f "$f" ] && echo "$f"
+  done
+ )
+ if [ -d "$EXPIMPLOC/backup" ] && [ ! -L "$EXPIMPLOC/backup" ]
+  then
+	find "$EXPIMPLOC/backup" ! -type l -user "$CURUSER" -exec chmod "$mode" {} + || rc=1
+ fi
+ return "$rc"
+}
+
+# run dialog - on AIX the included dialog needs its own library path, it is set only
+# for dialog (R3trans and all other commands keep the LIBPATH of the SAP system)
+expimp_run_dialog() {
+ if [ -n "$EXPIMPDIALOGLIB" ]
+  then
+	LIBPATH="${LIBPATH:+$LIBPATH:}$EXPIMPDIALOGLIB" dialog "$@"
+ else
+	dialog "$@"
+ fi
+}
+
 # current size of the dialogs: at most global_height x global_width (45 x 80),
 # limited to the current size of the terminal (sets DLGH, DLGW and DLGL = list height)
+# - a terminal that reports no size (0 x 0) is handled like an unknown size
+# - 0 as height / width (terminal smaller than 3 x 3) lets dialog choose the size
 expimp_dialog_size() {
  local termsize termlines termcols
- termsize=$(stty size < /dev/tty 2>/dev/null)
+ termsize=$(stty size 2>/dev/null < /dev/tty)
  termlines=${termsize% *}
  termcols=${termsize#* }
- case "$termlines$termcols" in
-  ''|*[!0-9]*) termlines=$(tput lines 2>/dev/null); termcols=$(tput cols 2>/dev/null) ;;
+ case "$termlines:$termcols" in
+  *[!0-9:]*|:*|*:|0:*|*:0) termlines=$(tput lines 2>/dev/null); termcols=$(tput cols 2>/dev/null) ;;
  esac
  DLGH=${global_height:-45}
  DLGW=${global_width:-80}
  case "$termlines" in
-  ''|*[!0-9]*) ;;
+  ''|*[!0-9]*|0) ;;
   *) [ "$termlines" -lt $((DLGH + 2)) ] && DLGH=$((termlines - 2)) ;;
  esac
  case "$termcols" in
-  ''|*[!0-9]*) ;;
+  ''|*[!0-9]*|0) ;;
   *) [ "$termcols" -lt $((DLGW + 2)) ] && DLGW=$((termcols - 2)) ;;
  esac
+ [ "$DLGH" -lt 0 ] && DLGH=0
+ [ "$DLGW" -lt 0 ] && DLGW=0
  DLGL=$((DLGH - 10))
  [ "$DLGL" -lt 1 ] && DLGL=1
 }
@@ -102,14 +142,12 @@ expimp_dialog_size() {
 # - the result of dialog (selection, input) is written to stdout
 # - older dialog versions end with an error if the terminal is made smaller than the
 #   dialog - then the dialog is shown again with the new size (instead of "ESC")
-# - progressbox: the input is always read completely, so the writing process (R3trans)
-#   is never ended by a broken pipe, even if dialog ends with an error
+# - while dialog ends with an error, the error is shown (e.g. the terminal is too small
+#   or DIALOGRC is invalid) and dialog is started again every second (at most 300 times)
 expimp_dialog() {
- local rc tries arg args progress errfile outfile
+ local rc tries arg args errfile outfile
  errfile=$EXPIMPLOC/.expimp_dialog_err.$$
  outfile=$EXPIMPLOC/.expimp_dialog_out.$$
- progress=no
- for arg in "$@"; do [ "$arg" = "--progressbox" ] && progress=yes; done
  tries=0
  while :
  do
@@ -125,25 +163,25 @@ expimp_dialog() {
    esac
    args+=("$arg")
   done
-  dialog --output-fd 3 "${args[@]}" 3> "$outfile" 2> "$errfile" > /dev/tty
+  expimp_run_dialog --output-fd 3 "${args[@]}" 3> "$outfile" 2> "$errfile" > /dev/tty
   rc=$?
-  # error of dialog (not ESC): show the dialog again with the current size
+  # error of dialog (not ESC): show the error and the dialog again with the current size
   if [ "$rc" -ne 0 ] && [ "$rc" -ne 1 ] && [ -s "$errfile" ] && [ "$tries" -lt 300 ]
    then
 	tries=$((tries + 1))
-	if [ "$progress" = yes ]
-	 then
-		# discard the output for a moment (it is in the R3trans log files)
-		while IFS= read -r -t 1 _; do :; done
-	else
-		sleep 1
-	fi
+	{
+	 clear
+	 echo "'dialog' ended with an error (RC=$rc):"
+	 head -5 "$errfile"
+	 echo ""
+	 echo "If the terminal is too small, please make it bigger."
+	 echo "Retry $tries/300 - cancel with CTRL+C"
+	} > /dev/tty 2>/dev/null
+	sleep 1
 	continue
   fi
   break
  done
- # progressbox: read the rest of the input (never break the pipe of R3trans)
- [ "$progress" = yes ] && cat > /dev/null
  cat "$outfile" 2>/dev/null
  [ "$rc" -ne 0 ] && [ "$rc" -ne 1 ] && cat "$errfile" >&2 2>/dev/null
  rm -f "$outfile" "$errfile"
@@ -166,7 +204,7 @@ expimp_progress_bar() {
 #   R3trans in between is collected and shown with the next update (no flickering)
 # - the input is always read completely (R3trans is never ended by a broken pipe)
 expimp_progressbox() {
- local text=$1 line eof drawsize lastsize max start i out
+ local text=$1 line eof drawsize lastsize max start i out linewidth
  local -a lines=()
  eof=no
  lastsize=""
@@ -199,12 +237,14 @@ expimp_progressbox() {
   [ "$max" -lt 1 ] && max=1
   start=$((${#lines[@]} - max))
   [ "$start" -lt 0 ] && start=0
-  out="$text"$'\n'"$(printf '%*s' $((DLGW - 4)) '' | tr ' ' '-')"
+  linewidth=$((DLGW - 4))
+  [ "$linewidth" -lt 1 ] && linewidth=1
+  out="$text"$'\n'"$(printf '%*s' "$linewidth" '' | tr ' ' '-')"
   for ((i = start; i < ${#lines[@]}; i++))
   do
-   out+=$'\n'"${lines[$i]:0:$((DLGW - 4))}"
+   out+=$'\n'"${lines[$i]:0:$linewidth}"
   done
   # if dialog fails (terminal too small), the screen is cleared and drawn with the next update
-  dialog --title "$global_title" --backtitle "$global_backtitle" --no-collapse --no-nl-expand --infobox "$out" "$DLGH" "$DLGW" > /dev/tty 2>/dev/null || lastsize=""
+  expimp_run_dialog --title "$global_title" --backtitle "$global_backtitle" --no-collapse --no-nl-expand --infobox "$out" "$DLGH" "$DLGW" > /dev/tty 2>/dev/null || lastsize=""
  done
 }

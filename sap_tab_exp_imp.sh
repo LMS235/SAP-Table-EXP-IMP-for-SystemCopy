@@ -26,6 +26,7 @@
 # Version 1.10  - Security Hardening (permissions, checksums, target check, backup, user and config check)
 # Version 2.0 - Completely redesigned with new features and security options
 # Version 2.0.1 - Customizing Dialog Box Colors
+# Version 2.0.2 - Some Improvements
 
 ##### CONFIG EXPORT / IMPORT LOCATION #####
 export EXPIMPLOC=
@@ -94,6 +95,7 @@ export EXPIMPPERM=STRICT
 # 98 - cannot find SAP SID
 # 97 - cannot start dialog
 # 96 - Hit ESC
+# 95 - cannot find R3trans
 # 94 - cannot create / secure export location (writable / group / permissions)
 # 93 - no SHA-256 tool found (sha256sum, shasum, csum or openssl)
 # 92 - user is not <sid>adm
@@ -104,7 +106,7 @@ export EXPIMPPERM=STRICT
 # 11 - fail to select templates for export
 # 12 - no template selected for export
 # 13 - error while export (R3trans RC >= 8 or template missing)
-# 14 - export info error
+# 14 - export info error (dialog error while showing the result)
 # 15 - backup of the previous run failed
 # import
 # 20 - no exports found for import
@@ -113,7 +115,7 @@ export EXPIMPPERM=STRICT
 # 23 - import select error
 # 24 - no exports selected for import
 # 25 - error while import (R3trans RC >= 8)
-# 26 - import info error
+# 26 - import info error (dialog error while showing the result)
 # 27 - checksum verification failed
 # 28 - import not confirmed
 # 29 - no export selected for import
@@ -130,6 +132,9 @@ export global_title="SAP Table EXP/IMP for SystemCopy (c) Florian Lamml 2026"
 export global_backtitle="SAP Table EXP/IMP for SystemCopy (c) Florian Lamml 2026"
 export global_copy="(c) Florian Lamml 2026"
 
+# helper functions (permissions, checksums, dialog)
+# shellcheck source=script/sap_expimp_lib.sh
+. "$global_pwd/script/sap_expimp_lib.sh"
 
 # root check
 CURUSER=$(id -un)
@@ -176,12 +181,14 @@ if [ -z "${PARALLEL}" ];
 	PARALLEL=0
 fi
 case "$PARALLEL" in
- *[!0-9]*)
+ *[!0-9]*|??????????*)
    echo "PARALLEL '$PARALLEL' is invalid (allowed: 0 or a positive number)"
    echo "... EXIT NOW"
    exit 91
    ;;
 esac
+# always a decimal number (a leading zero would be read as an octal number)
+PARALLEL=$((10#$PARALLEL))
 export PARALLEL
 
 # BACKUPKEEP check empty variable
@@ -190,12 +197,14 @@ if [ -z "${BACKUPKEEP}" ];
 	BACKUPKEEP=0
 fi
 case "$BACKUPKEEP" in
- *[!0-9]*)
+ *[!0-9]*|??????????*)
    echo "BACKUPKEEP '$BACKUPKEEP' is invalid (allowed: 0 = unlimited or a positive number)"
    echo "... EXIT NOW"
    exit 91
    ;;
 esac
+# always a decimal number (a leading zero would be read as an octal number)
+BACKUPKEEP=$((10#$BACKUPKEEP))
 export BACKUPKEEP
 
 # check permission mode and set umask
@@ -266,6 +275,8 @@ esac
 # create export location and secure it (only users of the group of <sid>adm may read and write)
 # the directory EXPIMPLOC itself may belong to another user / group (if it already exists),
 # it only has to be writable for <sid>adm - all files and directories in it are checked
+# permissions are only changed for the files of this tool (files of previous runs, logfiles,
+# backups) - other files in EXPIMPLOC are checked, but never changed
 CURGROUP=$(id -gn)
 if [ ! -d "$EXPIMPLOC" ] && ! mkdir -p "$EXPIMPLOC";
  then
@@ -282,8 +293,16 @@ fi
 if [ "$EXPIMPPERM" = OPEN ];
  then
    # open permissions for own files of previous runs, errors are ignored (e.g. NFS)
-   find "$EXPIMPLOC" -user "$CURUSER" | awk -v d="$EXPIMPLOC" '$0 != d' | while IFS= read -r OWNFILE; do chmod a+rwX "$OWNFILE" 2>/dev/null; done
+   expimp_chmod_own a+rwX 2>/dev/null
 else
+   # EXPIMPLOC itself must not be writable by others (they could delete or replace
+   # the export files) - a directory with sticky bit is ok (e.g. /tmp)
+   if [ -n "$(find "$EXPIMPLOC" -prune -perm -002 ! -perm -1000 2>/dev/null)" ];
+    then
+      echo "$EXPIMPLOC is writable by others (use 'chmod o-w $EXPIMPLOC' or EXPIMPPERM=OPEN)!"
+      echo "... EXIT NOW"
+      exit 94
+   fi
    FOREIGNFILE=$(find "$EXPIMPLOC" ! -group "$CURGROUP" 2>/dev/null | awk -v d="$EXPIMPLOC" '$0 != d' | head -1)
    if [ -n "$FOREIGNFILE" ];
     then
@@ -291,7 +310,7 @@ else
       echo "... EXIT NOW"
       exit 94
    fi
-   if ! find "$EXPIMPLOC" -user "$CURUSER" | awk -v d="$EXPIMPLOC" '$0 != d' | while IFS= read -r OWNFILE; do chmod g+rwX,o-rwx "$OWNFILE" || exit 1; done;
+   if ! expimp_chmod_own g+rwX,o-rwx;
     then
       echo "cannot set permissions in $EXPIMPLOC"
       echo "... EXIT NOW"
@@ -312,8 +331,6 @@ export EXPIMPLOGFILE
 date "+%d.%m.%Y-%H:%M" >> "$EXPIMPLOGFILE"
 
 # SHA-256 tool for the checksums of the export files
-# shellcheck source=script/sap_expimp_lib.sh
-. "$global_pwd/script/sap_expimp_lib.sh"
 SHA256TOOL=$(expimp_find_sha256_tool)
 export SHA256TOOL
 if [ -z "$SHA256TOOL" ];
@@ -324,14 +341,25 @@ if [ -z "$SHA256TOOL" ];
    exit 93
 fi
 
-# check AIX and set PATH and LIBPATH to use linux dialog (build from dialog-1.2-20150225 with gcc-4.8.3-1.aix7.1 on AIX 7.1) on AIX
+# check if R3trans is available
+if ! command -v R3trans > /dev/null 2>&1;
+ then
+   echo "cannot find R3trans in the PATH"
+   echo "... EXIT NOW"
+   echo "ERROR: cannot find R3trans in the PATH" >> "$EXPIMPLOGFILE"
+   exit 95
+fi
+
+# check AIX and set PATH to use linux dialog (build from dialog-1.2-20150225 with gcc-4.8.3-1.aix7.1 on AIX 7.1) on AIX
+# the library path of the included dialog is set only for dialog (see expimp_run_dialog)
 OS=$(uname)
 export OS
+export EXPIMPDIALOGLIB=""
 if [ "$OS" = AIX ]
 then
 export PATH="$PATH:$global_pwd/dialogaix/bin"
-export LIBPATH="$LIBPATH:$global_pwd/dialogaix/lib"
-chmod u+x "$global_pwd/dialogaix/bin/dialog"
+export EXPIMPDIALOGLIB="$global_pwd/dialogaix/lib"
+[ -x "$global_pwd/dialogaix/bin/dialog" ] || chmod u+x "$global_pwd/dialogaix/bin/dialog" 2>/dev/null
 fi
 
 # readable color scheme for dialog (the defaults of older dialog versions use bold
@@ -343,7 +371,7 @@ fi
 export DIALOGRC
 
 # check if dialog is running
-if ! dialog > /dev/null 2>&1;
+if ! expimp_run_dialog > /dev/null 2>&1;
  then
 	echo "cannot start linux 'dialog' command"
 	echo "... EXIT NOW"

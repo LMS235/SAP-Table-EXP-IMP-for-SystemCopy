@@ -26,6 +26,7 @@
 # Version 1.10  - Security Hardening (permissions, checksums, target check, backup, user and config check)
 # Version 2.0 - Completely redesigned with new features and security options
 # Version 2.0.1 - Customizing Dialog Box Colors
+# Version 2.0.2 - Some Improvements
 
 # --- key codes -----------------------------------------------------------
 $Global:UiKeyEnter = 13
@@ -49,6 +50,9 @@ $Global:UiSelBg    = 'DarkBlue'
 $Global:UiSelFg    = 'White'
 
 $Global:UiFrameHeight = 0
+# rows of the last frame (only rows that changed are written again)
+$Global:UiLastRows    = $null
+$Global:UiLastSize    = ''
 
 # -------------------------------------------------------------------------
 # Host capabilities - the console host must support ReadKey and cursor moves
@@ -73,6 +77,12 @@ function Write-ExpImpLog {
     param([string]$Message)
     # UTF-8: user names / paths with umlauts are kept (the R3trans control files stay ASCII)
     Add-Content -LiteralPath $Global:EXPIMPLOGFILE -Value $Message -Encoding utf8
+}
+
+# R3trans control files and the info files must be plain ASCII without BOM
+function Write-AsciiFile {
+    param([string]$Path, [string[]]$Lines)
+    [System.IO.File]::WriteAllLines($Path, [string[]]$Lines, (New-Object System.Text.ASCIIEncoding))
 }
 
 # -------------------------------------------------------------------------
@@ -158,14 +168,27 @@ function Get-ExpImpMeta {
     return ''
 }
 
-# files of a previous export / import run in EXPIMPLOC
-function Get-ExpImpRunFiles {
+# name of a file of an export / import run
+function Test-ExpImpRunFileName {
+    param([string]$Name)
     $names = @('selected_tables_for_export.conf', 'exported_tables.conf', 'exported_tables_ok.conf',
                'selected_tables_import.conf', 'imported_tables.conf')
-    return @(Get-ChildItem -LiteralPath $Global:EXPIMPLOC -File | Where-Object {
-        $names -contains $_.Name -or $_.Name -like '*.tpl' -or $_.Name -like '*.dat' -or
-        $_.Name -like '*.exp.log' -or $_.Name -like '*.imp.log'
-    })
+    if ($names -contains $Name) { return $true }
+    if ($Name -like '*.tpl' -or $Name -like '*.dat' -or $Name -like '*.exp.log' -or $Name -like '*.imp.log') { return $true }
+    return $false
+}
+
+# file or directory of this tool in EXPIMPLOC (files of a run, logfiles, backups)
+function Test-ExpImpOwnItem {
+    param($Item)
+    if ($Item.PSIsContainer) { return ($Item.Name -eq 'backup') }
+    if ($Item.Name -like 'EXP_IMP_LOG_*.txt') { return $true }
+    return (Test-ExpImpRunFileName -Name $Item.Name)
+}
+
+# files of a previous export / import run in EXPIMPLOC
+function Get-ExpImpRunFiles {
+    return @(Get-ChildItem -LiteralPath $Global:EXPIMPLOC -File | Where-Object { Test-ExpImpRunFileName -Name $_.Name })
 }
 
 function Read-UiKey {
@@ -277,19 +300,55 @@ function Build-UiFrame {
     return $frame
 }
 
+# clear the screen - the next frame is written completely
+function Reset-UiScreen {
+    Clear-Host
+    $Global:UiFrameHeight = 0
+    $Global:UiLastRows    = $null
+}
+
 function Write-UiFrame {
     param($Frame)
     $rui = $Host.UI.RawUI
     $scr = Get-UiScreenSize
     $w   = $scr.W - 1
+    $all = @($Frame)
+
+    # rows that did not change since the last frame are not written again (faster, less
+    # flickering) - this needs a host that can set the cursor position, otherwise the
+    # complete frame is written row by row
+    $canpos = $true
     try {
         $rui.CursorPosition = New-Object System.Management.Automation.Host.Coordinates 0, 0
     } catch {
+        $canpos = $false
         Clear-Host
     }
+    $size = "$($scr.W)x$($scr.H)"
+    $last = @()
+    if ($canpos -and $null -ne $Global:UiLastRows -and $Global:UiLastSize -eq $size) { $last = @($Global:UiLastRows) }
 
-    $rows = 0
-    foreach ($row in $Frame) {
+    # the rows below the frame are the blue backdrop for the rest of the screen /
+    # clear leftovers of the last frame
+    $total = [Math]::Max($all.Count, [Math]::Max([int]$Global:UiFrameHeight, $scr.H - 1))
+    $keys  = New-Object 'string[]' $total
+    for ($i = 0; $i -lt $total; $i++) {
+        $row = @()
+        if ($i -lt $all.Count) { $row = @($all[$i]) }
+        $key = 'row'
+        foreach ($seg in $row) { $key += "`n$($seg.Fg)|$($seg.Bg)|$($seg.Text)" }
+        $keys[$i] = $key
+        if ($canpos) {
+            if ($i -lt $last.Count -and $last[$i] -ceq $key) { continue }
+            try {
+                $rui.CursorPosition = New-Object System.Management.Automation.Host.Coordinates 0, $i
+            } catch {
+                # row outside of the screen buffer
+                $keys[$i] = ''
+                continue
+            }
+        }
+
         $used = 0
         foreach ($seg in $row) {
             if ($used -ge $w) { break }
@@ -306,17 +365,19 @@ function Write-UiFrame {
         if ($used -lt $w) {
             Write-Host (' ' * ($w - $used)) -NoNewline -ForegroundColor $Global:UiScreenFg -BackgroundColor $Global:UiScreenBg
         }
-        Write-Host ''
-        $rows++
+        if (-not $canpos) { Write-Host '' }
     }
 
-    # blue backdrop for the rest of the screen / clear leftovers of the last frame
-    $fill = [Math]::Max($Global:UiFrameHeight, $scr.H - 1)
-    for ($i = $rows; $i -lt $fill; $i++) {
-        Write-Host (' ' * $w) -NoNewline -ForegroundColor $Global:UiScreenFg -BackgroundColor $Global:UiScreenBg
-        Write-Host ''
+    # cursor below the frame
+    if ($canpos) {
+        $endrow = [Math]::Max(0, [Math]::Min($total, $scr.H - 1))
+        try {
+            $rui.CursorPosition = New-Object System.Management.Automation.Host.Coordinates 0, $endrow
+        } catch { }
     }
-    $Global:UiFrameHeight = $rows
+    $Global:UiFrameHeight = $all.Count
+    $Global:UiLastRows    = $keys
+    $Global:UiLastSize    = $size
 }
 
 function Split-UiText {
@@ -366,19 +427,54 @@ function New-UiOkCancelRow {
 }
 
 # -------------------------------------------------------------------------
+# text of a msgbox / yesno / inputbox - a text that is longer than the box
+# can be scrolled (the buttons are always visible)
+# -------------------------------------------------------------------------
+
+# adds the rows of the text to $Rows: the first row is empty or shows the scroll
+# position (if the text does not fit), then $Avail lines of the text from line $Top
+function Add-UiTextRows {
+    param($Rows, $Box, $Lines, [int]$Top, [int]$Avail)
+    $all = @($Lines)
+    $to  = [Math]::Min($Top + $Avail, $all.Count)
+    if ($all.Count -gt $Avail) {
+        $Rows.Add((New-UiInnerRow $Box "  [UP/DOWN/PGUP/PGDN] scroll - lines $($Top + 1)-$to of $($all.Count)" $Global:UiFrameFg $Global:UiBoxBg))
+    } else {
+        $Rows.Add((New-UiInnerRow $Box ''))
+    }
+    for ($i = $Top; $i -lt $to; $i++) {
+        $Rows.Add((New-UiInnerRow $Box (' ' + $all[$i])))
+    }
+}
+
+# first line of a scrollable text after a key (UP / DOWN / PGUP / PGDN),
+# limited to the lines of the text (key 0 = only check the limits)
+function Get-UiTextTop {
+    param([int]$Top, [int]$Count, [int]$Avail, [int]$Key)
+    if ($Key -eq $Global:UiKeyUp)   { $Top = $Top - 1 }
+    if ($Key -eq $Global:UiKeyDown) { $Top = $Top + 1 }
+    if ($Key -eq $Global:UiKeyPgUp) { $Top = $Top - $Avail }
+    if ($Key -eq $Global:UiKeyPgDn) { $Top = $Top + $Avail }
+    $max = [Math]::Max(0, $Count - $Avail)
+    if ($Top -gt $max) { $Top = $max }
+    if ($Top -lt 0)    { $Top = 0 }
+    return $Top
+}
+
+# -------------------------------------------------------------------------
 # msgbox   -> returns 0 (ok) or 255 (ESC)
 # -------------------------------------------------------------------------
 function Show-UiMsgBox {
     param([string]$Text, [string]$OkLabel = 'OK')
-    Clear-Host
-    $Global:UiFrameHeight = 0
+    Reset-UiScreen
+    $top = 0
     while ($true) {
-        $box  = Get-UiBoxSize
-        $rows = New-Object System.Collections.Generic.List[object]
-        $rows.Add((New-UiInnerRow $box ''))
-        foreach ($l in (Split-UiText $Text ($box.InW - 2))) {
-            $rows.Add((New-UiInnerRow $box (' ' + $l)))
-        }
+        $box   = Get-UiBoxSize
+        $lines = @(Split-UiText $Text ($box.InW - 2))
+        $avail = [Math]::Max(1, $box.InH - 3)
+        $top   = Get-UiTextTop -Top $top -Count $lines.Count -Avail $avail -Key 0
+        $rows  = New-Object System.Collections.Generic.List[object]
+        Add-UiTextRows -Rows $rows -Box $box -Lines $lines -Top $top -Avail $avail
         while ($rows.Count -lt ($box.InH - 2)) { $rows.Add((New-UiInnerRow $box '')) }
         $rows.Add((New-UiButtonRow $box @("< $OkLabel >")))
         $rows.Add((New-UiInnerRow $box ''))
@@ -387,6 +483,7 @@ function Show-UiMsgBox {
         $key = Read-UiKey
         if ($key.VirtualKeyCode -eq $Global:UiKeyEsc) { Clear-Host; return 255 }
         if ($key.VirtualKeyCode -eq $Global:UiKeyEnter -or $key.VirtualKeyCode -eq $Global:UiKeySpace) { Clear-Host; return 0 }
+        $top = Get-UiTextTop -Top $top -Count $lines.Count -Avail $avail -Key $key.VirtualKeyCode
     }
 }
 
@@ -395,16 +492,16 @@ function Show-UiMsgBox {
 # -------------------------------------------------------------------------
 function Show-UiYesNo {
     param([string]$Text, [string]$YesLabel = 'Yes', [string]$NoLabel = 'No', [switch]$DefaultNo)
-    Clear-Host
-    $Global:UiFrameHeight = 0
+    Reset-UiScreen
     $cur = if ($DefaultNo) { 1 } else { 0 }
+    $top = 0
     while ($true) {
-        $box  = Get-UiBoxSize
-        $rows = New-Object System.Collections.Generic.List[object]
-        $rows.Add((New-UiInnerRow $box ''))
-        foreach ($l in (Split-UiText $Text ($box.InW - 2))) {
-            $rows.Add((New-UiInnerRow $box (' ' + $l)))
-        }
+        $box   = Get-UiBoxSize
+        $lines = @(Split-UiText $Text ($box.InW - 2))
+        $avail = [Math]::Max(1, $box.InH - 4)
+        $top   = Get-UiTextTop -Top $top -Count $lines.Count -Avail $avail -Key 0
+        $rows  = New-Object System.Collections.Generic.List[object]
+        Add-UiTextRows -Rows $rows -Box $box -Lines $lines -Top $top -Avail $avail
         while ($rows.Count -lt ($box.InH - 3)) { $rows.Add((New-UiInnerRow $box '')) }
 
         $y = if ($cur -eq 0) { "[ $YesLabel ]" } else { "  $YesLabel  " }
@@ -417,6 +514,7 @@ function Show-UiYesNo {
         Write-UiFrame (Build-UiFrame $box $Global:global_title $rows)
 
         $key = Read-UiKey
+        $top = Get-UiTextTop -Top $top -Count $lines.Count -Avail $avail -Key $key.VirtualKeyCode
         switch ($key.VirtualKeyCode) {
             $Global:UiKeyEsc   { Clear-Host; return 255 }
             $Global:UiKeyEnter { Clear-Host; return $cur }
@@ -437,17 +535,17 @@ function Show-UiYesNo {
 # -------------------------------------------------------------------------
 function Show-UiInputBox {
     param([string]$Text, [int]$MaxLength = 40)
-    Clear-Host
-    $Global:UiFrameHeight = 0
+    Reset-UiScreen
     $value = ''
     $btn   = 0
+    $top   = 0
     while ($true) {
-        $box  = Get-UiBoxSize
-        $rows = New-Object System.Collections.Generic.List[object]
-        $rows.Add((New-UiInnerRow $box ''))
-        foreach ($l in (Split-UiText $Text ($box.InW - 2))) {
-            $rows.Add((New-UiInnerRow $box (' ' + $l)))
-        }
+        $box   = Get-UiBoxSize
+        $lines = @(Split-UiText $Text ($box.InW - 2))
+        $avail = [Math]::Max(1, $box.InH - 6)
+        $top   = Get-UiTextTop -Top $top -Count $lines.Count -Avail $avail -Key 0
+        $rows  = New-Object System.Collections.Generic.List[object]
+        Add-UiTextRows -Rows $rows -Box $box -Lines $lines -Top $top -Avail $avail
         $rows.Add((New-UiInnerRow $box ''))
         $rows.Add((New-UiInnerRow $box ('  > ' + $value + '_') $Global:UiSelFg $Global:UiSelBg))
         while ($rows.Count -lt ($box.InH - 3)) { $rows.Add((New-UiInnerRow $box '')) }
@@ -457,6 +555,7 @@ function Show-UiInputBox {
         Write-UiFrame (Build-UiFrame $box $Global:global_title $rows)
 
         $key = Read-UiKey
+        $top = Get-UiTextTop -Top $top -Count $lines.Count -Avail $avail -Key $key.VirtualKeyCode
         switch ($key.VirtualKeyCode) {
             $Global:UiKeyEsc   { Clear-Host; return [PSCustomObject]@{ Cancelled = $true;  Value = '' } }
             $Global:UiKeyEnter { Clear-Host; return [PSCustomObject]@{ Cancelled = ($btn -eq 1); Value = $value } }
@@ -475,15 +574,15 @@ function Show-UiInputBox {
 # -------------------------------------------------------------------------
 # radiolist -> returns [PSCustomObject] Cancelled / Tag
 # Items: objects with .Tag, .Item, .On
+# the marked entry (*) always is the entry of the cursor - ENTER returns
+# exactly the entry that is shown as selected
 # -------------------------------------------------------------------------
 function Show-UiRadioList {
     param([string]$Text, $Items)
-    Clear-Host
-    $Global:UiFrameHeight = 0
+    Reset-UiScreen
     $list = @($Items)
     $cur = 0
-    $set = 0
-    for ($i = 0; $i -lt $list.Count; $i++) { if ($list[$i].On) { $set = $i; $cur = $i; break } }
+    for ($i = 0; $i -lt $list.Count; $i++) { if ($list[$i].On) { $cur = $i; break } }
     $top = 0
     $btn = 0
 
@@ -503,7 +602,7 @@ function Show-UiRadioList {
         foreach ($l in $head) { $rows.Add((New-UiInnerRow $box (' ' + $l))) }
         $rows.Add((New-UiInnerRow $box ''))
         for ($i = $top; $i -lt [Math]::Min($top + $avail, $list.Count); $i++) {
-            $mark = if ($i -eq $set) { '(*)' } else { '( )' }
+            $mark = if ($i -eq $cur) { '(*)' } else { '( )' }
             $line = "  $mark $($list[$i].Item)"
             if ($i -eq $cur) {
                 $rows.Add((New-UiInnerRow $box $line $Global:UiSelFg $Global:UiSelBg))
@@ -514,7 +613,7 @@ function Show-UiRadioList {
         while ($rows.Count -lt ($box.InH - 3)) { $rows.Add((New-UiInnerRow $box '')) }
         $rows.Add((New-UiOkCancelRow $box $btn))
         $rows.Add((New-UiInnerRow $box ''))
-        $rows.Add((New-UiInnerRow $box '  [UP/DOWN] move  [SPACE] select  [TAB] OK/Cancel  [ENTER] confirm' $Global:UiFrameFg $Global:UiBoxBg))
+        $rows.Add((New-UiInnerRow $box '  [UP/DOWN] select  [TAB] OK/Cancel  [ENTER] confirm  [ESC] cancel' $Global:UiFrameFg $Global:UiBoxBg))
         Write-UiFrame (Build-UiFrame $box $Global:global_title $rows)
 
         $key = Read-UiKey
@@ -524,12 +623,10 @@ function Show-UiRadioList {
             $Global:UiKeyDown  { if ($cur -lt $list.Count - 1) { $cur++ } }
             $Global:UiKeyHome  { $cur = 0 }
             $Global:UiKeyEnd   { $cur = $list.Count - 1 }
-            $Global:UiKeySpace { $set = $cur }
             $Global:UiKeyEnter {
                 Clear-Host
                 if ($btn -eq 1) { return [PSCustomObject]@{ Cancelled = $true; Tag = $null } }
-                $set = $cur
-                return [PSCustomObject]@{ Cancelled = $false; Tag = $list[$set].Tag }
+                return [PSCustomObject]@{ Cancelled = $false; Tag = $list[$cur].Tag }
             }
             9  { $btn = 1 - $btn }    # tab
             37 { $btn = 0 }           # left
@@ -544,8 +641,7 @@ function Show-UiRadioList {
 # -------------------------------------------------------------------------
 function Show-UiCheckList {
     param([string]$Text, $Items)
-    Clear-Host
-    $Global:UiFrameHeight = 0
+    Reset-UiScreen
     $list = @($Items)
     if ($list.Count -eq 0) {
         return [PSCustomObject]@{ Cancelled = $false; Tags = @() }
@@ -622,8 +718,7 @@ function Show-UiCheckList {
 # -------------------------------------------------------------------------
 function Show-UiTextBox {
     param([string]$Path, [string]$ExitLabel = 'Continue')
-    Clear-Host
-    $Global:UiFrameHeight = 0
+    Reset-UiScreen
     $content = @()
     if (Test-Path -LiteralPath $Path) { $content = @(Get-Content -LiteralPath $Path) }
     $top  = 0
@@ -673,8 +768,7 @@ function Show-UiTextBox {
 # -------------------------------------------------------------------------
 function Start-UiProgressView {
     param([string]$Text)
-    Clear-Host
-    $Global:UiFrameHeight = 0
+    Reset-UiScreen
     $w = (Get-UiScreenSize).W - 1
     Write-Host (' ' + $Global:global_backtitle).PadRight($w) -ForegroundColor White -BackgroundColor $Global:UiScreenBg
     Write-Host ('=' * $w) -ForegroundColor DarkCyan -BackgroundColor $Global:UiScreenBg
@@ -688,6 +782,5 @@ function Complete-UiProgressView {
     Write-Host ''
     Write-Host '  ... press any key to continue' -ForegroundColor Yellow
     [void](Read-UiKey)
-    Clear-Host
-    $Global:UiFrameHeight = 0
+    Reset-UiScreen
 }

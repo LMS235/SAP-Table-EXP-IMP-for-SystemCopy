@@ -28,6 +28,7 @@
 # Version 1.10  - Security Hardening (permissions, checksums, target check, backup, user and config check)
 # Version 2.0 - Completely redesigned with new features and security options
 # Version 2.0.1 - Customizing Dialog Box Colors
+# Version 2.0.2 - Some Improvements
 
 # the import script must be started by sap_tab_exp_imp.sh (config, checks, logfile)
 if [ -z "$EXPIMPLOC" ] || [ -z "$EXPIMPLOGFILE" ] || [ -z "$SHA256TOOL" ]
@@ -111,7 +112,8 @@ if [ -e "$exportedtablesok" ]
 fi
 
 # build list of OK exports for import (RC=0 or RC=4, order of the export is kept)
-awk -F'|' '!/^#/ && ($2 == "RC=0" || $2 == "RC=4")' "$exportedtables" > "$exportedtablesok"
+# (a carriage return at the end is removed - info files written by the windows version)
+awk -F'|' '{ sub(/\r$/, "") } !/^#/ && ($2 == "RC=0" || $2 == "RC=4")' "$exportedtables" > "$exportedtablesok"
 if [ ! -s "$exportedtablesok" ]
  then 
 	echo "ERROR: no OK exports found for import" >> "$EXPIMPLOGFILE"
@@ -140,13 +142,6 @@ if [ ! -s "$importtables" ]
  then 
 	echo "ERROR: no exports selected for import" >> "$EXPIMPLOGFILE"
 	exit 24
-fi
-
-if [ "$OS" = Linux ]
- then
-  listcleaner=$IMPSRC/listcleaner.conf
-  sed 's/\"//g' "$importtables" > "$listcleaner"
-  mv "$listcleaner" "$importtables"
 fi
 
 # metadata of the source system (written by the export since version 1.10)
@@ -244,13 +239,13 @@ do
  IMPNR=$((IMPNR + 1))
  echo "=== Import $IMPNR/$IMPTOTAL: $SELTABLES ==="
  # R3trans error output is shown in the progress box too
- R3trans -w "$IMPSRC/$SELTABLES.imp.log" -i "$IMPSRC/$SELTABLES.dat" 2>&1
+ # (no input for R3trans - the standard input of the loop is the list of the exports)
+ R3trans -w "$IMPSRC/$SELTABLES.imp.log" -i "$IMPSRC/$SELTABLES.dat" < /dev/null 2>&1
  IMPRC=$?
  echo "$SELTABLES|RC=$IMPRC" >> "$importedtables"
  echo "=== Import END $SELTABLES (RC=$IMPRC) ==="
  echo "=== $(expimp_progress_bar "$IMPNR" "$IMPTOTAL") done ==="
  echo ""
- sleep 1
 done < "$importtables"
 echo "# =====================================" >> "$importedtables"
 )
@@ -262,12 +257,9 @@ echo "# =====================================" >> "$importedtables"
  echo "=== imported tables ==="
 } >> "$EXPIMPLOGFILE"
 
-# import info
-if ! expimp_dialog --title "$global_title" --backtitle "$global_backtitle" --exit-label "Continue" --textbox "$importedtables" @H@ @W@
- then
-	echo "ERROR: import info error" >> "$EXPIMPLOGFILE"
-	exit 26
-fi 
+# import info (ESC only closes the overview - the result of the import is checked below)
+INFOERR=$(expimp_dialog --title "$global_title" --backtitle "$global_backtitle" --exit-label "Continue" --textbox "$importedtables" @H@ @W@ 2>&1)
+INFORC=$?
 clear
 
 # highest return code of R3trans (RC >= 8 is an error)
@@ -276,6 +268,13 @@ if [ "$IMPMAXRC" -ge 8 ]
  then
 	echo "ERROR: error while import (highest RC=$IMPMAXRC, see imported tables)" >> "$EXPIMPLOGFILE"
 	exit 25
+fi
+
+# the overview could not be shown (error of dialog)
+if [ "$INFORC" -ne 0 ] && [ -n "$INFOERR" ]
+ then
+	echo "ERROR: import info error ($INFOERR)" >> "$EXPIMPLOGFILE"
+	exit 26
 fi
 
 echo "=== import finished ===" >> "$EXPIMPLOGFILE"

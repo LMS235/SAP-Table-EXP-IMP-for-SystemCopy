@@ -28,6 +28,7 @@
 # Version 1.10  - Security Hardening (permissions, checksums, target check, backup, user and config check)
 # Version 2.0 - Completely redesigned with new features and security options
 # Version 2.0.1 - Customizing Dialog Box Colors
+# Version 2.0.2 - Some Improvements
 
 # the export script must be started by sap_tab_exp_imp.sh (config, checks, logfile)
 if [ -z "$EXPIMPLOC" ] || [ -z "$EXPIMPLOGFILE" ] || [ -z "$SHA256TOOL" ]
@@ -133,19 +134,25 @@ if [ ! -s "$selectedtablesforexport" ]
 	exit 12
 fi
 
-if [ "$OS" = Linux ]
- then
-  listcleaner=$EXPIMPLOC/listcleaner.conf
-  sed 's/\"//g' "$selectedtablesforexport" > "$listcleaner"
-  mv "$listcleaner" "$selectedtablesforexport"
-fi
-
 # logfile info
 {
  echo "=== selected tables for export ==="
  cat "$selectedtablesforexport"
  echo "=== selected tables for export ==="
 } >> "$EXPIMPLOGFILE"
+
+# check STMS_QA export (before the info file is written - ESC leaves no export without tables)
+if grep -qx STMS_QA "$selectedtablesforexport"
+then
+ expimp_dialog --title "$global_title" --backtitle "$global_backtitle" --ok-label "Continue" --msgbox "You are going to export STMS_QA \n\n Please refresh STMS_QA before continue" @H@ @W@
+ # check ESC hit
+ if [ $? -eq 255 ];
+ then
+	echo "INFO: exit at the STMS_QA hint (ESC hit)" >> "$EXPIMPLOGFILE"
+	rm -f "$selectedtablesforexport"
+	exit 96
+ fi
+fi
 
 # info file (with metadata of the source system - checked by the import)
 {
@@ -161,17 +168,6 @@ fi
  echo "# DATE=$(date "+%Y-%m-%d %H:%M:%S")"
  echo "# ====================================="
 } > "$exportedtables"
-
-# check STMS_QA export
-if grep -qx STMS_QA "$selectedtablesforexport"
-then
- expimp_dialog --title "$global_title" --backtitle "$global_backtitle" --ok-label "Continue" --msgbox "You are going to export STMS_QA \n\n Please refresh STMS_QA before continue" @H@ @W@
- # check ESC hit
- if [ $? -eq 255 ];
- then
-	exit 96
- fi
-fi
 
 # export and export dialog (with progress: number of the template / number of templates)
 EXPTOTAL=$(grep -c . "$selectedtablesforexport")
@@ -206,7 +202,8 @@ do
   awk '1' "$global_pwd/templates/$SELTABLES"
  } > "$EXPIMPLOC/$SELTABLES.tpl"
  # R3trans error output is shown in the progress box too
- R3trans -w "$EXPIMPLOC/$SELTABLES.exp.log" "$EXPIMPLOC/$SELTABLES.tpl" 2>&1
+ # (no input for R3trans - the standard input of the loop is the list of the templates)
+ R3trans -w "$EXPIMPLOC/$SELTABLES.exp.log" "$EXPIMPLOC/$SELTABLES.tpl" < /dev/null 2>&1
  EXPRC=$?
  EXPSHA256=""
  [ -f "$EXPIMPLOC/$SELTABLES.dat" ] && EXPSHA256=$(expimp_sha256 "$EXPIMPLOC/$SELTABLES.dat")
@@ -214,7 +211,6 @@ do
  echo "=== Export END $SELTABLES (RC=$EXPRC) ==="
  echo "=== $(expimp_progress_bar "$EXPNR" "$EXPTOTAL") done ==="
  echo ""
- sleep 1
 done < "$selectedtablesforexport"
 echo "# =====================================" >> "$exportedtables"
 )
@@ -226,12 +222,9 @@ echo "# =====================================" >> "$exportedtables"
  echo "=== exported tables ==="
 } >> "$EXPIMPLOGFILE"
 
-# export info
-if ! expimp_dialog --title "$global_title" --backtitle "$global_backtitle" --exit-label "Continue" --textbox "$exportedtables" @H@ @W@
- then
-	echo "ERROR: export info error" >> "$EXPIMPLOGFILE"
-	exit 14
-fi 
+# export info (ESC only closes the overview - the result of the export is checked below)
+INFOERR=$(expimp_dialog --title "$global_title" --backtitle "$global_backtitle" --exit-label "Continue" --textbox "$exportedtables" @H@ @W@ 2>&1)
+INFORC=$?
 clear
 
 # highest return code of R3trans (RC >= 8 or a missing template is an error, an empty template is not)
@@ -240,6 +233,13 @@ if [ "$EXPMAXRC" -ge 8 ]
  then
 	echo "ERROR: error while export (highest RC=$EXPMAXRC, see exported tables)" >> "$EXPIMPLOGFILE"
 	exit 13
+fi
+
+# the overview could not be shown (error of dialog)
+if [ "$INFORC" -ne 0 ] && [ -n "$INFOERR" ]
+ then
+	echo "ERROR: export info error ($INFOERR)" >> "$EXPIMPLOGFILE"
+	exit 14
 fi
 
 echo "=== export finished ===" >> "$EXPIMPLOGFILE"
