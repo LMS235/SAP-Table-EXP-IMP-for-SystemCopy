@@ -190,12 +190,12 @@ function Invoke-Tool {
     $keyfile = Join-Path $work 'keys.txt'
     $scrfile = Join-Path $work 'screens.txt'
     $errfile = Join-Path $work 'error.txt'
-    $cmderr  = Join-Path $work 'error_cmd.txt'
     [System.IO.File]::WriteAllLines($keyfile, [string[]]$Keys)
     if (Test-Path -LiteralPath $scrfile) { Remove-Item -LiteralPath $scrfile -Force }
     if (Test-Path -LiteralPath $errfile) { Remove-Item -LiteralPath $errfile -Force }
 
-    # own console window with a defined size
+    # own console window with a defined size (no redirection of Start-Process: the tool
+    # would share the console of the tests and the screens could not be read)
     $ps      = Join-Path $env:SystemRoot 'System32\WindowsPowerShell\v1.0\powershell.exe'
     $cmdfile = Join-Path $work 'run.cmd'
     $cmdlines = @(
@@ -213,7 +213,7 @@ function Invoke-Tool {
     if (-not $NoR3trans) { $env:PATH = "$fakebin;$oldpath" }
     $exitcode = -1
     try {
-        $p = Start-Process -FilePath (Join-Path $env:SystemRoot 'System32\cmd.exe') -ArgumentList "/c `"$cmdfile`"" -PassThru -RedirectStandardError $cmderr
+        $p = Start-Process -FilePath (Join-Path $env:SystemRoot 'System32\cmd.exe') -ArgumentList "/c `"$cmdfile`"" -PassThru
         $null = $p.Handle
         if ($p.WaitForExit(900000)) {
             $exitcode = $p.ExitCode
@@ -229,7 +229,6 @@ function Invoke-Tool {
     if (Test-Path -LiteralPath $scrfile) { $screens = [System.IO.File]::ReadAllText($scrfile) }
     $erroroutput = ''
     if (Test-Path -LiteralPath $errfile) { $erroroutput = [System.IO.File]::ReadAllText($errfile) }
-    if (Test-Path -LiteralPath $cmderr)  { $erroroutput = $erroroutput + [System.IO.File]::ReadAllText($cmderr) }
     $keysleft = @(Get-Content -LiteralPath $keyfile).Count
     return [PSCustomObject]@{ ExitCode = $exitcode; Screens = $screens; KeysLeft = $keysleft; ErrorOutput = $erroroutput }
 }
