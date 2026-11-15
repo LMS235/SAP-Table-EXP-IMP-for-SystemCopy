@@ -25,6 +25,7 @@
 # Version 1.10  - Security Hardening (permissions, checksums, target check, backup, user and config check)
 # Version 2.0 - Completely redesigned with new features and security options
 # Version 2.0.1 - Customizing Dialog Box Colors
+# Version 2.0.2 - Some Improvements
 
 $ErrorActionPreference = 'Stop'
 
@@ -34,12 +35,6 @@ if (-not $Global:EXPIMPRUNNING -or -not $Global:EXPIMPLOC -or -not $Global:EXPIM
     Write-Host 'This script must be started by sap_tab_exp_imp.ps1!'
     Write-Host '... EXIT NOW'
     exit 90
-}
-
-# R3trans control files must be plain ASCII without BOM
-function Write-AsciiFile {
-    param([string]$Path, [string[]]$Lines)
-    [System.IO.File]::WriteAllLines($Path, [string[]]$Lines, (New-Object System.Text.ASCIIEncoding))
 }
 
 # set config file and delete old one
@@ -133,6 +128,17 @@ Write-ExpImpLog '=== selected tables for export ==='
 foreach ($t in $seltables) { Write-ExpImpLog $t }
 Write-ExpImpLog '=== selected tables for export ==='
 
+# check STMS_QA export (before the info file is written - ESC leaves no export without tables)
+if ($seltables -contains 'STMS_QA') {
+    $rc = Show-UiMsgBox -Text "You are going to export STMS_QA `n`n Please refresh STMS_QA before continue" -OkLabel 'Continue'
+    # check ESC hit
+    if ($rc -eq 255) {
+        Write-ExpImpLog 'INFO: exit at the STMS_QA hint (ESC hit)'
+        Remove-Item -LiteralPath $selectedtablesforexport -Force -ErrorAction SilentlyContinue
+        exit 96
+    }
+}
+
 # info file (with metadata of the source system - checked by the import)
 Write-AsciiFile -Path $exportedtables -Lines @(
     '# Template name | Return Code of Export | SHA-256 of the data file'
@@ -148,40 +154,33 @@ Write-AsciiFile -Path $exportedtables -Lines @(
     '# ====================================='
 )
 
-# check STMS_QA export
-if ($seltables -contains 'STMS_QA') {
-    $rc = Show-UiMsgBox -Text "You are going to export STMS_QA `n`n Please refresh STMS_QA before continue" -OkLabel 'Continue'
-    # check ESC hit
-    if ($rc -eq 255) { exit 96 }
-}
-
 # export and export dialog
 try {
     # progress: number of the template / number of templates
     $exptotal = $seltables.Count
     $expnr    = 0
     Start-UiProgressView -Text "Export SAP Tables ($exptotal templates)"
-    foreach ($SELTABLES in $seltables) {
+    foreach ($seltable in $seltables) {
         $expnr++
-        Write-Host "=== Export $expnr/$exptotal`: $SELTABLES ===" -ForegroundColor Cyan
-        $templatefile = Join-Path $templatedir $SELTABLES
+        Write-Host "=== Export $expnr/$exptotal`: $seltable ===" -ForegroundColor Cyan
+        $templatefile = Join-Path $templatedir $seltable
         if (-not (Test-Path -LiteralPath $templatefile)) {
-            Write-Host "=== Export SKIPPED $SELTABLES (template missing) ===" -ForegroundColor Yellow
+            Write-Host "=== Export SKIPPED $seltable (template missing) ===" -ForegroundColor Yellow
             Write-Host "=== $(Get-ExpImpProgressBar -Current $expnr -Total $exptotal) done ===" -ForegroundColor Green
             Write-Host ''
-            Add-Content -LiteralPath $exportedtables -Value "$SELTABLES|RC=TEMPLATE_MISSING|SHA256=" -Encoding ascii
+            Add-Content -LiteralPath $exportedtables -Value "$seltable|RC=TEMPLATE_MISSING|SHA256=" -Encoding ascii
             continue
         }
         if (-not (@(Get-Content -LiteralPath $templatefile) -match '\S')) {
-            Write-Host "=== Export SKIPPED $SELTABLES (template empty) ===" -ForegroundColor Yellow
+            Write-Host "=== Export SKIPPED $seltable (template empty) ===" -ForegroundColor Yellow
             Write-Host "=== $(Get-ExpImpProgressBar -Current $expnr -Total $exptotal) done ===" -ForegroundColor Green
             Write-Host ''
-            Add-Content -LiteralPath $exportedtables -Value "$SELTABLES|RC=TEMPLATE_EMPTY|SHA256=" -Encoding ascii
+            Add-Content -LiteralPath $exportedtables -Value "$seltable|RC=TEMPLATE_EMPTY|SHA256=" -Encoding ascii
             continue
         }
-        $tplfile = Join-Path $Global:EXPIMPLOC "$SELTABLES.tpl"
-        $datfile = Join-Path $Global:EXPIMPLOC "$SELTABLES.dat"
-        $logfile = Join-Path $Global:EXPIMPLOC "$SELTABLES.exp.log"
+        $tplfile = Join-Path $Global:EXPIMPLOC "$seltable.tpl"
+        $datfile = Join-Path $Global:EXPIMPLOC "$seltable.dat"
+        $logfile = Join-Path $Global:EXPIMPLOC "$seltable.exp.log"
 
         $tpl = New-Object System.Collections.Generic.List[string]
         $tpl.Add('export')
@@ -207,11 +206,10 @@ try {
         }
         $sha256 = ''
         if (Test-Path -LiteralPath $datfile) { $sha256 = Get-ExpImpSha256 -Path $datfile }
-        Add-Content -LiteralPath $exportedtables -Value "$SELTABLES|RC=$rc|SHA256=$sha256" -Encoding ascii
-        Write-Host "=== Export END $SELTABLES (RC=$rc) ===" -ForegroundColor Cyan
+        Add-Content -LiteralPath $exportedtables -Value "$seltable|RC=$rc|SHA256=$sha256" -Encoding ascii
+        Write-Host "=== Export END $seltable (RC=$rc) ===" -ForegroundColor Cyan
         Write-Host "=== $(Get-ExpImpProgressBar -Current $expnr -Total $exptotal) done ===" -ForegroundColor Green
         Write-Host ''
-        Start-Sleep -Seconds 1
     }
     Add-Content -LiteralPath $exportedtables -Value '# =====================================' -Encoding ascii
     Complete-UiProgressView
@@ -225,12 +223,8 @@ Write-ExpImpLog '=== exported tables ==='
 foreach ($line in @(Get-Content -LiteralPath $exportedtables)) { Write-ExpImpLog $line }
 Write-ExpImpLog '=== exported tables ==='
 
-# export info
-$rc = Show-UiTextBox -Path $exportedtables -ExitLabel 'Continue'
-if ($rc -ne 0) {
-    Write-ExpImpLog 'ERROR: export info error'
-    exit 14
-}
+# export info (ESC only closes the overview - the result of the export is checked below)
+[void](Show-UiTextBox -Path $exportedtables -ExitLabel 'Continue')
 Clear-Host
 
 # highest return code of R3trans (RC >= 8 or a missing template is an error, an empty template is not)

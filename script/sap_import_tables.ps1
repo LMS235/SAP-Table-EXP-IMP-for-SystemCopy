@@ -25,6 +25,7 @@
 # Version 1.10  - Security Hardening (permissions, checksums, target check, backup, user and config check)
 # Version 2.0 - Completely redesigned with new features and security options
 # Version 2.0.1 - Customizing Dialog Box Colors
+# Version 2.0.2 - Some Improvements
 
 $ErrorActionPreference = 'Stop'
 
@@ -34,11 +35,6 @@ if (-not $Global:EXPIMPRUNNING -or -not $Global:EXPIMPLOC -or -not $Global:EXPIM
     Write-Host 'This script must be started by sap_tab_exp_imp.ps1!'
     Write-Host '... EXIT NOW'
     exit 90
-}
-
-function Write-AsciiFile {
-    param([string]$Path, [string[]]$Lines)
-    [System.IO.File]::WriteAllLines($Path, [string[]]$Lines, (New-Object System.Text.ASCIIEncoding))
 }
 
 # exports available for import: the current export and the backups of previous runs
@@ -83,10 +79,8 @@ if ($impsrcdirs.Count -gt 1) {
 }
 Write-ExpImpLog "INFO: import from $impsrc"
 
-# set config file
-$exportedtables = Join-Path $impsrc 'exported_tables.conf'
-
-# set config file
+# set config files
+$exportedtables   = Join-Path $impsrc 'exported_tables.conf'
 $exportedtablesok = Join-Path $impsrc 'exported_tables_ok.conf'
 
 # check existing data
@@ -109,11 +103,11 @@ if (Test-Path -LiteralPath $exportedtablesok) {
     }
 }
 
-# build list of OK exports for import
+# build list of OK exports for import (the second field is exactly RC=0 or RC=4)
 $okexports = @(
     Get-Content -LiteralPath $exportedtables |
         Where-Object { $_ -notmatch '^#' } |
-        Where-Object { $_ -match 'RC=0' -or $_ -match 'RC=4' }
+        Where-Object { @('RC=0', 'RC=4') -contains ($_ -split '\|')[1] }
 )
 if ($okexports.Count -eq 0) {
     Write-ExpImpLog 'ERROR: no OK exports found for import'
@@ -154,8 +148,7 @@ $expdate   = Get-ExpImpMeta -Path $exportedtables -Key 'DATE'
 $curhost   = [Environment]::MachineName
 function Get-OrUnknown { param([string]$Value) if ($Value) { return $Value } return 'unknown' }
 
-# list of the selected exports (PowerShell variables are case-insensitive:
-# the import loop variable $SELTABLES overwrites $seltables)
+# list of the selected exports
 $importlist = @($seltables)
 
 # verify the SHA-256 checksums of the selected exports
@@ -256,12 +249,12 @@ try {
     $imptotal = $importlist.Count
     $impnr    = 0
     Start-UiProgressView -Text "Import selected tables ($imptotal exports)"
-    foreach ($SELTABLES in $importlist) {
+    foreach ($imptable in $importlist) {
         $impnr++
-        $datfile = Join-Path $impsrc "$SELTABLES.dat"
-        $logfile = Join-Path $impsrc "$SELTABLES.imp.log"
+        $datfile = Join-Path $impsrc "$imptable.dat"
+        $logfile = Join-Path $impsrc "$imptable.imp.log"
 
-        Write-Host "=== Import $impnr/$imptotal`: $SELTABLES ===" -ForegroundColor Cyan
+        Write-Host "=== Import $impnr/$imptotal`: $imptable ===" -ForegroundColor Cyan
         # R3trans writes warnings to stderr - '2>&1' would raise a terminating
         # error under $ErrorActionPreference = 'Stop' (Windows PowerShell 5.1)
         $prevEap = $ErrorActionPreference
@@ -272,11 +265,10 @@ try {
         } finally {
             $ErrorActionPreference = $prevEap
         }
-        Add-Content -LiteralPath $importedtables -Value "$SELTABLES|RC=$rc" -Encoding ascii
-        Write-Host "=== Import END $SELTABLES (RC=$rc) ===" -ForegroundColor Cyan
+        Add-Content -LiteralPath $importedtables -Value "$imptable|RC=$rc" -Encoding ascii
+        Write-Host "=== Import END $imptable (RC=$rc) ===" -ForegroundColor Cyan
         Write-Host "=== $(Get-ExpImpProgressBar -Current $impnr -Total $imptotal) done ===" -ForegroundColor Green
         Write-Host ''
-        Start-Sleep -Seconds 1
     }
     Add-Content -LiteralPath $importedtables -Value '# =====================================' -Encoding ascii
     Complete-UiProgressView
@@ -290,12 +282,8 @@ Write-ExpImpLog '=== imported tables ==='
 foreach ($line in @(Get-Content -LiteralPath $importedtables)) { Write-ExpImpLog $line }
 Write-ExpImpLog '=== imported tables ==='
 
-# import info
-$rc = Show-UiTextBox -Path $importedtables -ExitLabel 'Continue'
-if ($rc -ne 0) {
-    Write-ExpImpLog 'ERROR: import info error'
-    exit 26
-}
+# import info (ESC only closes the overview - the result of the import is checked below)
+[void](Show-UiTextBox -Path $importedtables -ExitLabel 'Continue')
 Clear-Host
 
 # highest return code of R3trans (RC >= 8 is an error)
