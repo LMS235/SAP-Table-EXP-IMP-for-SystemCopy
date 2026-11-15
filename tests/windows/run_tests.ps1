@@ -48,7 +48,10 @@ function Read-UiKey {
         $sb   = New-Object System.Text.StringBuilder
         for ($y = 0; $y -lt $size.Height; $y++) {
             $line = New-Object System.Text.StringBuilder
-            for ($x = 0; $x -lt $size.Width; $x++) { [void]$line.Append($buf[$y, $x].Character) }
+            for ($x = 0; $x -lt $size.Width; $x++) {
+                $cell = $buf[$y, $x]
+                [void]$line.Append($cell.Character)
+            }
             [void]$sb.AppendLine($line.ToString().TrimEnd())
         }
         $screen = $sb.ToString()
