@@ -1,0 +1,17 @@
+#!/bin/bash
+# stand-in for 'dialog' (tests): every call of a dialog takes the next line
+# "RC|OUTPUT|ERROR" of the file $EXPIMP_TEST_ANSWERS and writes the call to $EXPIMP_TEST_CALLS
+set -uo pipefail
+[ $# -eq 0 ] && exit 0
+for arg in "$@"; do [ "$arg" = "--infobox" ] && exit 0; done
+line=$(head -1 "$EXPIMP_TEST_ANSWERS")
+sed -i 1d "$EXPIMP_TEST_ANSWERS"
+rc=${line%%|*}
+rest=${line#*|}
+out=${rest%%|*}
+err=""
+[ "$rest" != "$out" ] && err=${rest#*|}
+printf 'rc=%s out=%s :: %s\n' "$rc" "$out" "$(printf '%s ' "$@" | tr '\n' ' ')" >> "$EXPIMP_TEST_CALLS"
+[ -n "$out" ] && printf '%b' "$out" >&3
+[ -n "$err" ] && echo "$err" >&2
+exit "${rc:-255}"

@@ -1,0 +1,22 @@
+#!/bin/bash
+# stand-in for 'R3trans' (tests)
+# export: writes the data file of the control file, the template RZ04 ends with RC 8
+# import: a data file with FAIL in its name ends with RC 12
+set -uo pipefail
+log=/dev/null
+if [ "${1:-}" = "-w" ]; then log=$2; shift 2; fi
+if [ "${1:-}" = "-i" ]
+ then
+  echo "import $2" > "$log"
+  echo "R3trans (test) import $2"
+  case "$2" in *FAIL*) exit 12 ;; esac
+  exit 0
+fi
+tpl=$1
+dat=$(sed -n "s/^file = '\(.*\)'$/\1/p" "$tpl")
+echo "export $tpl" > "$log"
+echo "R3trans (test) export $tpl"
+echo "R3trans (test) message on stderr" >&2
+case "$tpl" in *RZ04*) exit 8 ;; esac
+echo "data of $tpl" > "$dat"
+exit 0

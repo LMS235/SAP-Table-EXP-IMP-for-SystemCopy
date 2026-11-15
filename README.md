@@ -115,6 +115,7 @@ Keys in the console UI:
 | `script/sap_import_tables.ps1` | import script (Windows) |
 | `script/sap_expimp_ui.ps1` | console UI for Windows (replaces `dialog`) |
 | `templates/*` | R3trans table templates (used by both versions) |
+| `tests/*` | tests of both versions with stand-ins for `R3trans` (run by GitHub Actions, not needed to use the tool) |
 
 ## Config
 
