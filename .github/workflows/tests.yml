@@ -15,7 +15,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: shellcheck
         run: shellcheck -x -S style sap_tab_exp_imp.sh script/*.sh tests/unix/run_tests.sh tests/unix/fake/dialog tests/unix/fake/R3trans
       - name: install dialog
@@ -28,7 +28,7 @@ jobs:
     runs-on: windows-latest
     timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: tests
         shell: powershell
         run: .\tests\windows\run_tests.ps1

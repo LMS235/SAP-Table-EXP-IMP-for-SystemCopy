@@ -94,6 +94,8 @@ function Assert-That {
 function Complete-Test {
     param($Result)
     if (-not $script:testfailed) { return }
+    Write-Host '---------- error output of the tool ----------'
+    Write-Host $Result.ErrorOutput
     Write-Host '---------- screens of the failed test ----------'
     Write-Host $Result.Screens
     $locsid = Join-Path $script:loc $sid
@@ -122,7 +124,8 @@ function Test-FileLine {
 
 function Get-LogFile {
     $locsid = Join-Path $script:loc $sid
-    $logs = @(Get-ChildItem -LiteralPath $locsid -File -Filter 'EXP_IMP_LOG_*.txt')
+    $logs = @()
+    if (Test-Path -LiteralPath $locsid) { $logs = @(Get-ChildItem -LiteralPath $locsid -File -Filter 'EXP_IMP_LOG_*.txt') }
     if ($logs.Count -eq 0) { return (Join-Path $locsid 'no_logfile') }
     return $logs[0].FullName
 }
@@ -173,10 +176,21 @@ function Invoke-Tool {
     $mainfile = Join-Path $copy 'sap_tab_exp_imp.ps1'
     [System.IO.File]::WriteAllText($mainfile, $main, (New-Object System.Text.UTF8Encoding $true))
 
+    # the copies must be valid scripts
+    foreach ($f in @($mainfile, (Join-Path $copy 'script\sap_expimp_ui.ps1'))) {
+        $tokens = $null
+        $errors = $null
+        $null = [System.Management.Automation.Language.Parser]::ParseFile($f, [ref]$tokens, [ref]$errors)
+        foreach ($e in @($errors)) { Write-Host "  syntax error in the copy $f, line $($e.Extent.StartLineNumber): $($e.Message)" }
+    }
+
     $keyfile = Join-Path $work 'keys.txt'
     $scrfile = Join-Path $work 'screens.txt'
+    $errfile = Join-Path $work 'error.txt'
+    $cmderr  = Join-Path $work 'error_cmd.txt'
     [System.IO.File]::WriteAllLines($keyfile, [string[]]$Keys)
     if (Test-Path -LiteralPath $scrfile) { Remove-Item -LiteralPath $scrfile -Force }
+    if (Test-Path -LiteralPath $errfile) { Remove-Item -LiteralPath $errfile -Force }
 
     # own console window with a defined size
     $ps      = Join-Path $env:SystemRoot 'System32\WindowsPowerShell\v1.0\powershell.exe'
@@ -184,7 +198,7 @@ function Invoke-Tool {
     $cmdlines = @(
         '@echo off',
         "mode con: cols=100 lines=$Rows >nul 2>&1",
-        "`"$ps`" -NoProfile -ExecutionPolicy Bypass -File `"$mainfile`"",
+        "`"$ps`" -NoProfile -ExecutionPolicy Bypass -File `"$mainfile`" 2> `"$errfile`"",
         'exit /b %errorlevel%'
     )
     [System.IO.File]::WriteAllLines($cmdfile, [string[]]$cmdlines, (New-Object System.Text.ASCIIEncoding))
@@ -196,7 +210,7 @@ function Invoke-Tool {
     if (-not $NoR3trans) { $env:PATH = "$fakebin;$oldpath" }
     $exitcode = -1
     try {
-        $p = Start-Process -FilePath (Join-Path $env:SystemRoot 'System32\cmd.exe') -ArgumentList "/c `"$cmdfile`"" -PassThru
+        $p = Start-Process -FilePath (Join-Path $env:SystemRoot 'System32\cmd.exe') -ArgumentList "/c `"$cmdfile`"" -PassThru -RedirectStandardError $cmderr
         $null = $p.Handle
         if ($p.WaitForExit(900000)) {
             $exitcode = $p.ExitCode
@@ -210,8 +224,11 @@ function Invoke-Tool {
 
     $screens = ''
     if (Test-Path -LiteralPath $scrfile) { $screens = [System.IO.File]::ReadAllText($scrfile) }
+    $erroroutput = ''
+    if (Test-Path -LiteralPath $errfile) { $erroroutput = [System.IO.File]::ReadAllText($errfile) }
+    if (Test-Path -LiteralPath $cmderr)  { $erroroutput = $erroroutput + [System.IO.File]::ReadAllText($cmderr) }
     $keysleft = @(Get-Content -LiteralPath $keyfile).Count
-    return [PSCustomObject]@{ ExitCode = $exitcode; Screens = $screens; KeysLeft = $keysleft }
+    return [PSCustomObject]@{ ExitCode = $exitcode; Screens = $screens; KeysLeft = $keysleft; ErrorOutput = $erroroutput }
 }
 
 # ---------------------------------------------------------------------------
@@ -251,7 +268,9 @@ Start-Test 'export with a failed table, ESC in the overview'
 $r = Invoke-Tool -Keys (@($ENTER, $ENTER) + @(Get-SelectKeys @('AL11', 'RZ04')) + @($ENTER, $ESC, $ENTER))
 Assert-That ($r.ExitCode -eq 13) "exit code 13 (is $($r.ExitCode))"
 Assert-That ($r.KeysLeft -eq 0) "all keys used ($($r.KeysLeft) left)"
-Assert-That (@(Get-ChildItem -LiteralPath (Join-Path $locsid 'backup') -Directory).Count -eq 1) 'backup of the previous run'
+$backups = @()
+if (Test-Path -LiteralPath (Join-Path $locsid 'backup')) { $backups = @(Get-ChildItem -LiteralPath (Join-Path $locsid 'backup') -Directory) }
+Assert-That ($backups.Count -eq 1) 'backup of the previous run'
 Assert-That ($r.Screens.Contains('at least one table failed')) 'screen: hint in the summary'
 Complete-Test $r
 
@@ -277,9 +296,11 @@ Complete-Test $r
 
 # ---------------------------------------------------------------------------
 Start-Test 'import with a failed table, ESC in the overview'
-Copy-Item -LiteralPath (Join-Path $locsid 'SM59.dat') -Destination (Join-Path $locsid 'FAIL.dat')
-$lines = @(Get-Content -LiteralPath $conf | ForEach-Object { $_; if ($_ -like 'SM59|*') { $_ -replace '^SM59', 'FAIL' } })
-[System.IO.File]::WriteAllLines($conf, [string[]]$lines, (New-Object System.Text.ASCIIEncoding))
+if (Test-Path -LiteralPath (Join-Path $locsid 'SM59.dat')) {
+    Copy-Item -LiteralPath (Join-Path $locsid 'SM59.dat') -Destination (Join-Path $locsid 'FAIL.dat')
+    $lines = @(Get-Content -LiteralPath $conf | ForEach-Object { $_; if ($_ -like 'SM59|*') { $_ -replace '^SM59', 'FAIL' } })
+    [System.IO.File]::WriteAllLines($conf, [string[]]$lines, (New-Object System.Text.ASCIIEncoding))
+}
 # start dialog: DOWN ENTER - export: ENTER (current) - exports: ENTER - confirmation: y -
 # progress: ENTER - overview: ESC - summary: ENTER
 $r = Invoke-Tool -Keys @($DOWN, $ENTER, $ENTER, $ENTER, 'c:y', $ENTER, $ESC, $ENTER)
@@ -291,7 +312,7 @@ Complete-Test $r
 
 # ---------------------------------------------------------------------------
 Start-Test 'import with a changed data file'
-Add-Content -LiteralPath (Join-Path $locsid 'AL11.dat') -Value 'changed'
+if (Test-Path -LiteralPath (Join-Path $locsid 'AL11.dat')) { Add-Content -LiteralPath (Join-Path $locsid 'AL11.dat') -Value 'changed' }
 # start dialog: DOWN ENTER - export: ENTER - previous selection: ENTER (Continue) - exports: ENTER -
 # checksum error: ENTER - summary: ENTER
 $r = Invoke-Tool -Keys @($DOWN, $ENTER, $ENTER, $ENTER, $ENTER, $ENTER, $ENTER)
@@ -377,7 +398,7 @@ Set-Content -LiteralPath (Join-Path $locsid 'notes.txt') -Value 'other file'
 $r = Invoke-Tool -Keys @($ESC)
 Assert-That ($r.ExitCode -eq 96) "exit code 96 (is $($r.ExitCode))"
 Assert-That (Test-FileLine (Get-LogFile) 'WARNING: .*do not belong to this tool \(e\.g\. notes\.txt\)') 'log: warning'
-Assert-That (-not (Get-Acl -LiteralPath $locsid).AreAccessRulesProtected) 'permissions of EXPIMPLOC are not changed'
+Assert-That ((Test-Path -LiteralPath $locsid) -and -not (Get-Acl -LiteralPath $locsid).AreAccessRulesProtected) 'permissions of EXPIMPLOC are not changed'
 Complete-Test $r
 
 # ---------------------------------------------------------------------------
